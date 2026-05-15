@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import { useThemeClient } from "./ThemeContext";
@@ -79,6 +79,7 @@ export default function SonarLayout({ children }: { children: ReactNode }) {
 
   const COLORS = getTheme(isDarkMode);
   const css = getGlobalCSS(COLORS, isDarkMode);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const navItems = [
     { path: "/sonar/home", label: "Inicio", Icon: Icon.Home },
@@ -125,13 +126,19 @@ export default function SonarLayout({ children }: { children: ReactNode }) {
                 <Icon.Search />
               </div>
               <input
+                ref={searchInputRef}
                 placeholder="Buscar canciones, artistas…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 onFocus={handleSearchFocus}
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textTertiary, padding: 0, display: "flex", width: 18, height: 18 }}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={(e) => { e.stopPropagation(); setSearchQuery(""); searchInputRef.current?.focus(); }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.textTertiary, padding: 0, display: "flex", width: 18, height: 18 }}
+                >
                   <Icon.X />
                 </button>
               )}
