@@ -49,6 +49,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     background: ${colors.bg};
     overflow: hidden;
     position: relative;
+    --bottom-nav-height: 72px;
     display: flex;
     flex-direction: column;
     transition: background 0.4s;
@@ -121,13 +122,19 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   .avatar-btn:hover { transform: scale(1.08); box-shadow: 0 0 0 3px rgba(167,139,250,0.35), 0 4px 20px rgba(99,102,241,0.40); }
 
   .bottom-nav {
-    position: relative; z-index: 50;
+    /* Fixed to viewport bottom and respect safe area */
+    --bottom-nav-height: var(--bottom-nav-height, 72px);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 60;
+    height: var(--bottom-nav-height);
     display: flex; align-items: center; justify-content: space-around;
-    padding: 12px 20px calc(28px + env(safe-area-inset-bottom, 0px));
-    background: ${isDark ? 'rgba(26,26,46,0.85)' : 'rgba(224,228,248,0.85)'};
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: ${isDark ? 'rgba(26,26,46,0.95)' : 'rgba(224,228,248,0.95)'};
     border-top: 0.5px solid ${colors.glassBorder};
     box-shadow: ${isDark ? '0 -1px 0 rgba(255,255,255,0.06)' : '0 -1px 0 rgba(255,255,255,0.60)'};
-    flex-shrink: 0;
     transition: background 0.4s, border-color 0.3s;
   }
 
@@ -211,7 +218,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   .btn-ghost:hover { background: ${colors.surfaceHover}; box-shadow: ${colors.cardShadowHover}; transform: translateY(-1px); }
   .btn-ghost:disabled { opacity: 0.5; cursor: default; transform: none; }
 
-  .content-area { position: relative; z-index: 1; padding: 10px 20px calc(120px + env(safe-area-inset-bottom, 0px)); flex: 1; display: flex; flex-direction: column; }
+  .content-area { position: relative; z-index: 1; padding: 10px 20px calc(var(--bottom-nav-height, 72px) + env(safe-area-inset-bottom, 0px) + 20px); flex: 1; display: flex; flex-direction: column; }
 
   ::-webkit-scrollbar { width: 0; }
 `;
