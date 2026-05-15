@@ -16,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        <link rel="icon" href="/sonar.png" />
         <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
         <GlobalStyles />
       </head>
