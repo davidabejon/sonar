@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useThemeClient } from "../ThemeContext";
 import { useSearch } from "../SearchContext";
 import { getTheme } from "../theme";
-import { searchAll } from "../lib/spotify";
+import { searchAll, searchPaged } from "../lib/spotify";
 
 const Icon = {
   ChevronRight: () => (
@@ -101,12 +101,15 @@ export default function Search() {
   const { query, setQuery } = useSearch();
   const COLORS = getTheme(isDarkMode);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const offsetRef = useRef(0);
   
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [debouncing, setDebouncing] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
   const [displayLimit, setDisplayLimit] = useState(10);
 
   const colors = ["#FF6B6B", "#A78BFA", "#34D399", "#FBBF24", "#F97316", "#60A5FA"];
@@ -148,16 +151,20 @@ export default function Search() {
   const handleSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) return;
     
+    offsetRef.current = 0;
     setLoading(true);
     setSearched(true);
     setDisplayLimit(10);
     
     try {
-      const data = await searchAll(searchQuery, 20); // Increased limit for better caching
-      setResults(data);
+      const page = await searchPaged(searchQuery, 10, 0);
+      setResults(page.items || []);
+      setTotalResults(page.total || (page.items || []).length);
+      offsetRef.current = (page.items || []).length;
     } catch (error) {
       console.error("Search error:", error);
       setResults([]);
+      setTotalResults(0);
     } finally {
       setLoading(false);
     }
@@ -166,6 +173,23 @@ export default function Search() {
   const handleNavigate = useCallback((id: string, type: string) => {
     router.push(`/sonar/detail?id=${id}&type=${type}`);
   }, [router]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (!debouncedQuery.trim()) return;
+    setIsLoadingMore(true);
+    try {
+      const page = await searchPaged(debouncedQuery, 10, offsetRef.current);
+      const incoming = page.items || [];
+      offsetRef.current += incoming.length;
+      setResults(prev => [...prev, ...incoming]);
+      setDisplayLimit(prev => prev + incoming.length);
+      setTotalResults(page.total || offsetRef.current);
+    } catch (err) {
+      console.error("Load more error:", err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [debouncedQuery]);
 
   const css = `
     .glass-card {
@@ -243,7 +267,7 @@ export default function Search() {
             {results.length > 0 ? (
               <>
                 <div style={{ marginBottom: 8 }}>
-                  <p style={{ fontSize: 13, color: COLORS.textSecondary }}>Resultados encontrados: {results.length}</p>
+                  <p style={{ fontSize: 13, color: COLORS.textSecondary }}>Resultados encontrados: {totalResults}</p>
                 </div>
                 <div className="glass-card" style={{ padding: "0 16px", marginBottom: 24 }}>
                   {results.slice(0, displayLimit).map((item, i) => (
@@ -258,9 +282,10 @@ export default function Search() {
                     />
                   ))}
                 </div>
-                {displayLimit < results.length && (
+                {displayLimit < totalResults && (
                   <button
-                    onClick={() => setDisplayLimit(prev => prev + 10)}
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
                     style={{
                       width: "100%",
                       padding: "12px 16px",
@@ -271,13 +296,14 @@ export default function Search() {
                       borderRadius: "12px",
                       fontSize: 14,
                       fontWeight: 500,
-                      cursor: "pointer",
+                      cursor: isLoadingMore ? "not-allowed" : "pointer",
+                      opacity: isLoadingMore ? 0.6 : 1,
                       transition: "opacity 0.15s",
                     }}
-                    onMouseEnter={(e) => ((e.target as HTMLButtonElement).style.opacity = "0.8")}
-                    onMouseLeave={(e) => ((e.target as HTMLButtonElement).style.opacity = "1")}
+                    onMouseEnter={(e) => !isLoadingMore && ((e.target as HTMLButtonElement).style.opacity = "0.8")}
+                    onMouseLeave={(e) => !isLoadingMore && ((e.target as HTMLButtonElement).style.opacity = "1")}
                   >
-                    Cargar 10 más ({displayLimit} de {results.length})
+                    {isLoadingMore ? "Cargando..." : `Cargar 10 más (${displayLimit} de ${totalResults})`}
                   </button>
                 )}
               </>

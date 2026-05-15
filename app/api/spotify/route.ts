@@ -70,10 +70,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json([]);
       }
 
+      // Default pagination: limit=10 to match frontend
+      const clientLimit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10);
+      const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10) || 0);
+      const fetchLimit = 50; // fetch a larger pool so we can balance types reliably (Spotify max ~50)
       const data = await spotifyFetch("/search", {
         q,
         type: "track,artist,album",
-        limit: "50",
+        limit: String(fetchLimit),
       });
 
       // Normalize results
@@ -102,15 +106,16 @@ export async function GET(request: NextRequest) {
       const queryLower = q.toLowerCase().trim();
 
       // Calculate score based on exact match + popularity
+      // New scoring: reduce raw popularity influence and favor exact name matches
       const calculateScore = (popularity: number, name: string, typeMultiplier: number): number => {
-        let score = popularity || 0;
-        // Boost for exact match (name matches query exactly)
-        if (name.toLowerCase() === queryLower) {
-          score *= 2.0; // 100% boost for exact match
-        }
-        // Apply type-based multiplier
-        score *= typeMultiplier;
-        return score;
+        const pop = popularity || 0;
+        // Compress popularity influence (reduce weight)
+        const popScore = pop * 0.35; // reduced weight
+        // Strong additive boost for exact matches
+        const exactBoost = name.toLowerCase() === queryLower ? 60 : 0;
+        // Combine and apply type multiplier
+        const combined = (popScore + exactBoost) * typeMultiplier;
+        return combined;
       };
 
       // Add artists with exact match + popularity score
@@ -167,7 +172,7 @@ export async function GET(request: NextRequest) {
       // Sort by score (descending)
       results.sort((a, b) => (b._score || 0) - (a._score || 0));
 
-      // Get top result's artist ID to boost matching tracks
+      // Get top result's artist ID to boost matching tracks (apply boost before balancing)
       const topResult = results[0];
       let topArtistId: string | null = null;
       if (topResult?.type === "artist") {
@@ -187,10 +192,57 @@ export async function GET(request: NextRequest) {
         results.sort((a, b) => (b._score || 0) - (a._score || 0));
       }
 
-      // Remove _score before sending (keep all results for client-side pagination)
-      results.forEach(r => delete r._score);
+      // Balance top results by type according to desired proportions
+      const L = Math.min(clientLimit, results.length);
+      const proportions = { track: 0.6, artist: 0.2, album: 0.2 };
+      const desired: Record<string, number> = {
+        track: Math.floor(L * proportions.track),
+        artist: Math.floor(L * proportions.artist),
+        album: Math.floor(L * proportions.album),
+      };
+      // Distribute remainder to tracks first, then artists, then albums
+      let allocated = desired.track + desired.artist + desired.album;
+      const orderTypes = ["track", "artist", "album"];
+      let i = 0;
+      while (allocated < L) {
+        desired[orderTypes[i % orderTypes.length]] += 1;
+        allocated += 1;
+        i += 1;
+      }
 
-      return NextResponse.json(results);
+      // Create buckets preserving score order
+      const buckets: Record<string, any[]> = { track: [], artist: [], album: [] };
+      results.forEach(r => { if (buckets[r.type]) buckets[r.type].push(r); });
+
+      const chosen = new Set();
+      const balanced: any[] = [];
+      // Round-robin extract according to desired quotas
+      while (balanced.length < L) {
+        let progress = false;
+        for (const t of orderTypes) {
+          if (balanced.length >= L) break;
+          if (desired[t] > 0 && buckets[t].length > 0) {
+            const item = buckets[t].shift();
+            balanced.push(item);
+            chosen.add(item.id + "::" + item.type);
+            desired[t] -= 1;
+            progress = true;
+          }
+        }
+        if (!progress) break; // no more items available in buckets
+      }
+
+      // Append remaining items in original sorted order, excluding chosen
+      const remaining = results.filter(r => !chosen.has(r.id + "::" + r.type));
+      const finalResults = balanced.concat(remaining);
+
+      // Remove _score before sending (keep all results for client-side pagination)
+      finalResults.forEach(r => delete r._score);
+
+      // Apply pagination requested by client (limit + offset)
+      const paged = finalResults.slice(offset, offset + clientLimit);
+      const total = finalResults.length;
+      return NextResponse.json({ items: paged, total, offset, limit: clientLimit });
     }
 
     if (action === "lookup") {
