@@ -1,16 +1,16 @@
 # Production Dockerfile for Next.js app
-FROM node:20-alpine AS deps
+FROM node:20-bullseye-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --production=false
 
-FROM node:20-alpine AS builder
+FROM node:20-bullseye-slim AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate && npm run build
 
-FROM node:20-alpine AS runner
+FROM node:20-bullseye-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 # copy only what we need to run
