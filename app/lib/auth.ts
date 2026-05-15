@@ -42,3 +42,10 @@ export async function getSession(token: string) {
 export async function deleteSession(token: string) {
   await prisma.session.deleteMany({ where: { token } });
 }
+
+export async function isAdmin(token: string): Promise<boolean> {
+  const session = await getSession(token);
+  if (!session) return false;
+  const adminUsername = process.env.ADMIN_USERNAME;
+  return session.user.username === adminUsername;
+}

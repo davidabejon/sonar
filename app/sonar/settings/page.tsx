@@ -32,6 +32,11 @@ const Icon = {
       <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
     </svg>
   ),
+  Shield: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
   ChevronRight: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <polyline points="9 18 15 12 9 6" />
@@ -44,9 +49,11 @@ export default function Settings() {
   const { isDarkMode, toggleTheme } = useThemeClient();
   const COLORS = getTheme(isDarkMode);
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetch("/api/me").then(r => r.json()).then(setUser).catch(() => {});
+    fetch("/api/admin/check").then(r => r.json()).then(d => setIsAdmin(d.isAdmin)).catch(() => {});
   }, []);
 
   const handleLogout = async () => {
@@ -107,6 +114,7 @@ export default function Settings() {
       rows: [
         { label: "Correo electrónico", value: user?.email ?? "…", icon: <Icon.Globe /> },
         { label: "Contraseña", value: "••••••••", icon: <Icon.Lock /> },
+        ...(isAdmin ? [{ label: "Panel Admin", value: "→", icon: <Icon.Shield />, action: () => router.push('/admin') }] : []),
       ],
     },
     {
@@ -149,7 +157,12 @@ export default function Settings() {
             <div className="section-label">{section.title}</div>
             <div className="glass-card" style={{ padding: "0 16px" }}>
               {section.rows.map((row: any) => (
-                <div key={row.label} className="settings-row">
+                <div 
+                  key={row.label} 
+                  className="settings-row"
+                  onClick={row.action}
+                  style={{ cursor: row.action ? 'pointer' : 'default' }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ color: COLORS.textTertiary, width: 18, height: 18 }}>{row.icon}</div>
                     <span style={{ fontSize: 15 }}>{row.label}</span>
