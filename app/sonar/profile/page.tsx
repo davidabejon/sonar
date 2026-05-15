@@ -142,7 +142,7 @@ export default function Profile() {
       border-radius: 14px; color: ${COLORS.text};
       font-size: 14px; font-weight: 400; padding: 12px 20px;
       width: 100%; cursor: pointer; transition: all 0.2s;
-      margin-top: 10px;
+      margin-bottom: 30px;
     }
     .btn-ghost:hover { background: ${COLORS.surfaceHover}; }
   `;
@@ -166,7 +166,7 @@ export default function Profile() {
 
         <div className="content-area">
           {/* Stats */}
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 20 }}>
             <div className="glass-card" style={{ padding: "14px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 24, fontWeight: 300, marginBottom: 4 }}>
                 {totalCount === null ? "…" : totalCount}
@@ -174,6 +174,12 @@ export default function Profile() {
               <div style={{ fontSize: 11, color: COLORS.textTertiary }}>Entradas</div>
             </div>
           </div>
+
+          {(totalCount ?? 0) > 0 && (
+            <button className="btn-ghost" onClick={() => router.push("/sonar/ratings")}>
+              Ver todos los registros
+            </button>
+          )}
 
           {/* Top rated */}
           <div style={{ marginBottom: 10 }}>
@@ -195,35 +201,30 @@ export default function Profile() {
                 maxWidth={720}
               />
             )}
-            {(totalCount ?? 0) > 0 && (
-              <button className="btn-ghost" onClick={() => router.push("/sonar/ratings")}>
-                Ver todos los registros
-              </button>
-            )}
           </div>
 
           {/* Latest entry */}
           {latest && (
             <div style={{ marginTop: 28 }}>
               <div className="section-label">Última entrada</div>
-                <div className="glass-card" style={{ padding: 20 }}>
-                  <div onClick={() => router.push(`/sonar/detail?type=${latest.entryType}&id=${latest.entryId}`)} style={{ cursor: "pointer" }}>
-                    <FloatingCard
-                      thumbnail={latest.image || TYPE_EMOJI[latest.entryType] || "🎵"}
-                      title={latest.name}
-                      subtitle={latest.subtitle}
-                      score={(typeof latest.score === 'number') ? latest.score / 10 : 0}
-                      theme={isDarkMode ? "dark" : "light"}
-                      onClick={() => router.push(`/sonar/detail?type=${latest.entryType}&id=${latest.entryId}`)}
-                    />
-                  </div>
-                  {latest.notes && (
-                    <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6, fontStyle: "italic", marginTop: 14 }}>
-                      &ldquo;{latest.notes}&rdquo;
-                    </p>
-                  )}
-                  <p style={{ fontSize: 11, color: COLORS.textTertiary, marginTop: 10 }}>{timeAgo(latest.createdAt)}</p>
+              <div className="glass-card" style={{ padding: 20 }}>
+                <div onClick={() => router.push(`/sonar/detail?type=${latest.entryType}&id=${latest.entryId}`)} style={{ cursor: "pointer" }}>
+                  <FloatingCard
+                    thumbnail={latest.image || TYPE_EMOJI[latest.entryType] || "🎵"}
+                    title={latest.name}
+                    subtitle={latest.subtitle}
+                    score={(typeof latest.score === 'number') ? latest.score / 10 : 0}
+                    theme={isDarkMode ? "dark" : "light"}
+                    onClick={() => router.push(`/sonar/detail?type=${latest.entryType}&id=${latest.entryId}`)}
+                  />
                 </div>
+                {latest.notes && (
+                  <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6, fontStyle: "italic", marginTop: 14 }}>
+                    &ldquo;{latest.notes}&rdquo;
+                  </p>
+                )}
+                <p style={{ fontSize: 11, color: COLORS.textTertiary, marginTop: 10 }}>{timeAgo(latest.createdAt)}</p>
+              </div>
             </div>
           )}
         </div>

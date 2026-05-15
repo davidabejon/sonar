@@ -12,7 +12,8 @@ export async function saveRating(
   entryId: string,
   entryType: "track" | "album" | "artist",
   score: number,
-  notes?: string
+  notes?: string,
+  title?: string
 ): Promise<Rating> {
   const response = await fetch("/api/ratings", {
     method: "POST",
@@ -24,6 +25,7 @@ export async function saveRating(
       entryType,
       score,
       notes: notes || null,
+      title: title || null,
     }),
   });
 

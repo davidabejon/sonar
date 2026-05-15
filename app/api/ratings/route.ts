@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const userId = session.userId;
     const body = await request.json();
-    const { entryId, entryType, notes } = body;
+    const { entryId, entryType, notes, title } = body;
     const score = typeof body.score === "string" ? Number(body.score) : body.score;
 
     // Validate input
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       update: {
         score: finalScore,
         notes: notes || null,
+        title: title || undefined,
       },
       create: {
         userId,
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
         entryType,
         score: finalScore,
         notes: notes || null,
+        title: title || null,
       },
     });
 
@@ -95,9 +97,13 @@ export async function GET(request: NextRequest) {
     const limitParam = searchParams.get("limit");
     const offsetParam = searchParams.get("offset");
     const sort = searchParams.get("sort"); // e.g. 'score' or 'createdAt'
+    const filterType = searchParams.get("filterType"); // filter by type: track, album, artist
+    const minScore = searchParams.get("minScore"); // min score 0-100
+    const maxScore = searchParams.get("maxScore"); // max score 0-100
+    const q = searchParams.get("q"); // search query
 
     if (!entryId || !entryType) {
-      // List ratings with optional pagination and sorting
+      // List ratings with optional pagination, sorting, and filters
       const take = limitParam ? parseInt(limitParam, 10) : undefined;
       const skip = offsetParam ? parseInt(offsetParam, 10) : undefined;
 
@@ -106,14 +112,37 @@ export async function GET(request: NextRequest) {
       else if (sort === "createdAt") orderBy.createdAt = "desc";
       else orderBy.createdAt = "desc";
 
+      // Build filter conditions
+      const where: any = { userId };
+      if (filterType && ["track", "album", "artist"].includes(filterType)) {
+        where.entryType = filterType;
+      }
+      if (minScore !== null) {
+        const min = parseInt(minScore!, 10);
+        if (!isNaN(min)) where.score = { ...where.score, gte: min };
+      }
+      if (maxScore !== null) {
+        const max = parseInt(maxScore!, 10);
+        if (!isNaN(max)) where.score = { ...where.score, lte: max };
+      }
+      
+      // Search in title or notes
+      if (q) {
+        where.OR = [
+          { title: { contains: q } },
+          { notes: { contains: q } },
+          { entryId: { contains: q } },
+        ];
+      }
+
       const [items, total] = await Promise.all([
         prisma.rating.findMany({
-          where: { userId },
+          where,
           orderBy,
           take,
           skip,
         }),
-        prisma.rating.count({ where: { userId } }),
+        prisma.rating.count({ where }),
       ]);
 
       return NextResponse.json({ total, items });

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useThemeClient } from "../ThemeContext";
 import { getTheme } from "../theme";
 import { FloatingCard } from "@/app/FloatingCard";
+import { useSearch } from "../SearchContext";
 
 type Rating = { id: string; entryId: string; entryType: string; score: number; notes: string | null; createdAt: string };
 type RatingWithMeta = Rating & { name: string; subtitle: string; image?: string };
@@ -38,26 +39,220 @@ function timeAgo(dateStr: string): string {
   return `hace ${months} mes${months !== 1 ? "es" : ""}`;
 }
 
-export default function AllRatings() {
+function scoreToColor(score: number): string {
+  const t = Math.min(Math.max(score, 0), 10) / 10;
+  if (t <= 0.5) {
+    const s = t * 2;
+    const r = Math.round(220 + (255 - 220) * (1 - s));
+    const g = Math.round(70 + (185 - 70) * s);
+    const b = Math.round(50 + (30 - 50) * s);
+    return `rgb(${r},${g},${b})`;
+  } else {
+    const s = (t - 0.5) * 2;
+    const r = Math.round(255 - (255 - 80) * s);
+    const g = Math.round(185 + (210 - 185) * s);
+    const b = Math.round(30 + (80 - 30) * s);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+function ScoreRing({ score, isDarkMode }: { score: number; isDarkMode: boolean }) {
+  const RADIUS = 20;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  const color = scoreToColor(score);
+  const offset = CIRCUMFERENCE * (1 - score / 10);
+  
+  const trackStroke = isDarkMode ? "rgba(255,255,255,0.15)" : "rgba(80,60,160,0.15)";
+
+  return (
+    <div style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}>
+      <svg
+        width={48}
+        height={48}
+        viewBox="0 0 48 48"
+        style={{ transform: "rotate(-90deg)" }}
+        aria-hidden="true"
+      >
+        <circle
+          cx={24} cy={24} r={RADIUS}
+          fill="none"
+          stroke={trackStroke}
+          strokeWidth={3.5}
+        />
+        <circle
+          cx={24} cy={24} r={RADIUS}
+          fill="none"
+          stroke={color}
+          strokeWidth={3.5}
+          strokeLinecap="round"
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={offset}
+          style={{
+            transition: "stroke-dashoffset 0.6s cubic-bezier(.4,0,.2,1), stroke 0.6s ease",
+          }}
+        />
+      </svg>
+      <span
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 12,
+          fontWeight: 600,
+          color,
+          letterSpacing: "-0.5px",
+          transition: "color 0.6s ease",
+        }}
+      >
+        {score.toFixed(1)}
+      </span>
+    </div>
+  );
+}
+
+function AllRatingsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isDarkMode } = useThemeClient();
   const COLORS = getTheme(isDarkMode);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialized = useRef(false);
+
+  // Use context for persistent state
+  const {
+    ratingsSearch,
+    setRatingsSearch,
+    ratingsFilterType,
+    setRatingsFilterType,
+    ratingsSortBy,
+    setRatingsSortBy,
+    ratingsPage,
+    setRatingsPage,
+  } = useSearch();
 
   const [ratings, setRatings] = useState<RatingWithMeta[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  
+  // Local state for debouncing
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Store context setters in a ref to avoid listener recreation
+  const settersRef = useRef({
+    setRatingsPage,
+    setRatingsSearch,
+    setRatingsFilterType,
+    setRatingsSortBy,
+    setDebouncedQuery,
+  });
+
+  useEffect(() => {
+    settersRef.current = {
+      setRatingsPage,
+      setRatingsSearch,
+      setRatingsFilterType,
+      setRatingsSortBy,
+      setDebouncedQuery,
+    };
+  }, [setRatingsPage, setRatingsSearch, setRatingsFilterType, setRatingsSortBy]);
+
+  // Initialize state from URL params on mount
+  useEffect(() => {
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
+    const page = parseInt(searchParams.get("page") || "1");
+    const search = searchParams.get("search") || "";
+    const filterType = searchParams.get("filterType") || "";
+    const sort = searchParams.get("sort") || "createdAt";
+
+    setRatingsPage(page);
+    setRatingsSearch(search);
+    setRatingsFilterType(filterType);
+    setRatingsSortBy(sort);
+    setDebouncedQuery(search);
+  }, []);
+
+  // Helper to build URL from state
+  const buildUrl = (page: number, search: string, filterType: string, sort: string) => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set("page", String(page));
+    if (search) params.set("search", search);
+    if (filterType) params.set("filterType", filterType);
+    if (sort !== "createdAt") params.set("sort", sort);
+    
+    const queryString = params.toString();
+    return queryString ? `/sonar/ratings?${queryString}` : "/sonar/ratings";
+  };
+
+  // Sync state changes to URL
+  useEffect(() => {
+    if (!isInitialized.current) return;
+
+    const newUrl = buildUrl(ratingsPage, ratingsSearch, ratingsFilterType, ratingsSortBy);
+    window.history.replaceState(null, "", newUrl);
+  }, [ratingsPage, ratingsSearch, ratingsFilterType, ratingsSortBy]);
+
+  // Listen for back/forward navigation - only set up once
+  useEffect(() => {
+    const handlePopState = () => {
+      const searchStr = new URLSearchParams(window.location.search);
+      const page = parseInt(searchStr.get("page") || "1");
+      const search = searchStr.get("search") || "";
+      const filterType = searchStr.get("filterType") || "";
+      const sort = searchStr.get("sort") || "createdAt";
+
+      settersRef.current.setRatingsPage(page);
+      settersRef.current.setRatingsSearch(search);
+      settersRef.current.setRatingsFilterType(filterType);
+      settersRef.current.setRatingsSortBy(sort);
+      settersRef.current.setDebouncedQuery(search);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  const offset = (currentPage - 1) * PAGE_SIZE;
+  const offset = (ratingsPage - 1) * PAGE_SIZE;
+
+  // Debounce search query
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedQuery(ratingsSearch);
+      setRatingsPage(1); // Reset to page 1 when search changes
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [ratingsSearch, setRatingsPage]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setRatingsPage(1);
+  }, [ratingsFilterType, ratingsSortBy, setRatingsPage]);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(
-          `/api/ratings?limit=${PAGE_SIZE}&offset=${offset}&sort=createdAt`
-        );
+        const params = new URLSearchParams({
+          limit: String(PAGE_SIZE),
+          offset: String(offset),
+          sort: ratingsSortBy,
+        });
+
+        if (ratingsFilterType) params.append("filterType", ratingsFilterType);
+        if (debouncedQuery) params.append("q", debouncedQuery);
+
+        const res = await fetch(`/api/ratings?${params.toString()}`);
         const data = await res.json();
         const ratingsArr = data?.items || [];
         setTotalCount(data?.total || 0);
@@ -77,7 +272,7 @@ export default function AllRatings() {
         setLoading(false);
       }
     })();
-  }, [currentPage]);
+  }, [ratingsPage, debouncedQuery, ratingsFilterType, ratingsSortBy]);
 
   const css = `
     .glass-card {
@@ -91,6 +286,37 @@ export default function AllRatings() {
       font-size: 11px; font-weight: 600; letter-spacing: 1px;
       color: ${COLORS.textTertiary}; text-transform: uppercase;
       margin-bottom: 12px;
+    }
+
+    .filters-container {
+      padding: 16px; background: ${COLORS.surface}; border: 0.5px solid ${COLORS.glassBorder};
+      border-radius: 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .filter-row {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1; min-width: 150px;
+      background: ${COLORS.surface}; border: 0.5px solid ${COLORS.glassBorder}; border-radius: 12px;
+      color: ${COLORS.text}; padding: 8px 12px; font-size: 14px; outline: none;
+      transition: all 0.2s;
+    }
+    .search-input:focus { border-color: ${COLORS.accent}; box-shadow: 0 0 0 2px rgba(167,139,250,0.15); }
+    .search-input::placeholder { color: ${COLORS.textTertiary}; }
+
+    .filter-select {
+      background: ${COLORS.surface}; border: 0.5px solid ${COLORS.glassBorder}; border-radius: 12px;
+      color: ${COLORS.text}; padding: 8px 12px; font-size: 13px; cursor: pointer; outline: none;
+      transition: all 0.2s;
+    }
+    .filter-select:focus { border-color: ${COLORS.accent}; box-shadow: 0 0 0 2px rgba(167,139,250,0.15); }
+
+
+
+    .filter-label {
+      font-size: 12px; color: ${COLORS.textSecondary}; white-space: nowrap; font-weight: 500;
     }
 
     .rating-row {
@@ -119,13 +345,7 @@ export default function AllRatings() {
       flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
-    .rating-score {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      background: linear-gradient(135deg, #A78BFA22, #6366F122);
-      border: 1px solid rgba(167,139,250,0.3);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 600; color: ${COLORS.accent};
-    }
+
 
     .rating-subtitle {
       font-size: 12px; color: ${COLORS.textSecondary};
@@ -170,6 +390,40 @@ export default function AllRatings() {
         </div>
 
         <div className="content-area">
+          {/* Filters */}
+          <div className="filters-container">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Buscar por nombre..."
+              value={ratingsSearch}
+              onChange={(e) => setRatingsSearch(e.target.value)}
+            />
+            <div className="filter-row">
+              <label className="filter-label">Tipo:</label>
+              <select
+                className="filter-select"
+                value={ratingsFilterType}
+                onChange={(e) => setRatingsFilterType(e.target.value)}
+              >
+                <option value="">Todos</option>
+                <option value="track">Canción</option>
+                <option value="album">Álbum</option>
+                <option value="artist">Artista</option>
+              </select>
+
+              <label className="filter-label" style={{ marginLeft: "auto" }}>Ordenar por:</label>
+              <select
+                className="filter-select"
+                value={ratingsSortBy}
+                onChange={(e) => setRatingsSortBy(e.target.value)}
+              >
+                <option value="createdAt">Fecha</option>
+                <option value="score">Puntuación</option>
+              </select>
+            </div>
+          </div>
+
           {loading ? (
             <div className="glass-card" style={{ padding: "32px 20px", textAlign: "center", color: COLORS.textTertiary }}>
               Cargando…
@@ -199,7 +453,7 @@ export default function AllRatings() {
                       )}
                     </div>
                     <div className="rating-title">{r.name}</div>
-                    <div className="rating-score">{(r.score / 10).toFixed(1)}</div>
+                    <ScoreRing score={r.score / 10} isDarkMode={isDarkMode} />
                   </div>
                   <div className="rating-subtitle">{r.subtitle}</div>
                   {r.notes && <div className="rating-notes">&ldquo;{r.notes}&rdquo;</div>}
@@ -212,21 +466,21 @@ export default function AllRatings() {
                 <div className="pagination">
                   <button
                     className="pagination-btn"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={ratingsPage === 1}
+                    onClick={() => setRatingsPage(Math.max(1, ratingsPage - 1))}
                   >
                     ← Anterior
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => {
                     const page = i + 1;
-                    const isNear = Math.abs(page - currentPage) <= 1;
+                    const isNear = Math.abs(page - ratingsPage) <= 1;
                     const isFirst = page === 1;
                     const isLast = page === totalPages;
                     return isNear || isFirst || isLast ? (
                       <button
                         key={page}
-                        className={`pagination-btn ${page === currentPage ? "active" : ""}`}
-                        onClick={() => setCurrentPage(page)}
+                        className={`pagination-btn ${page === ratingsPage ? "active" : ""}`}
+                        onClick={() => setRatingsPage(page)}
                       >
                         {page}
                       </button>
@@ -238,8 +492,8 @@ export default function AllRatings() {
                   })}
                   <button
                     className="pagination-btn"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={ratingsPage === totalPages}
+                    onClick={() => setRatingsPage(Math.min(totalPages, ratingsPage + 1))}
                   >
                     Siguiente →
                   </button>
@@ -250,5 +504,13 @@ export default function AllRatings() {
         </div>
       </>
     </>
+  );
+}
+
+export default function AllRatings() {
+  return (
+    <Suspense fallback={<div style={{ padding: "20px", textAlign: "center", color: "#999" }}>Cargando...</div>}>
+      <AllRatingsContent />
+    </Suspense>
   );
 }
