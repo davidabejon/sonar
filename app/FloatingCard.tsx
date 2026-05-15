@@ -195,13 +195,16 @@ export function FloatingCard({
     border: `0.5px solid ${tk.cardBorder}`,
     background: tk.cardBg,
     boxShadow: hovered ? tk.cardShadowHover : tk.cardShadow,
-    transform: hovered ? "translateY(-2px) scale(1.012)" : "translateY(0) scale(1)",
+    transform: hovered ? "translateY(-1px)" : "translateY(0)",
     transition:
       "transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.25s ease",
     cursor: onClick ? "pointer" : "default",
     minWidth: 0,
     userSelect: "none",
     WebkitUserSelect: "none",
+    willChange: "transform, box-shadow",
+    backfaceVisibility: "hidden",
+    WebkitBackfaceVisibility: "hidden",
   };
 
   return (
@@ -288,7 +291,9 @@ export function FloatingCardList({
     maxWidth,
     width: "100%",
     position: "relative",
-    overflow: "hidden",
+    overflow: "visible",
+    contain: "layout style paint",
+    WebkitMaskImage: "-webkit-radial-gradient(white, black)",
   };
 
   const blobsStyle: React.CSSProperties = {
@@ -296,12 +301,12 @@ export function FloatingCardList({
     inset: 0,
     pointerEvents: "none",
     background: isDark
-      ? `radial-gradient(ellipse 60% 50% at 20% 30%, rgba(120,80,255,0.35) 0%, transparent 70%),
-         radial-gradient(ellipse 50% 60% at 80% 70%, rgba(255,100,150,0.25) 0%, transparent 70%),
-         radial-gradient(ellipse 40% 40% at 60% 15%, rgba(0,200,255,0.20) 0%, transparent 60%)`
-      : `radial-gradient(ellipse 60% 50% at 20% 30%, rgba(140,100,255,0.20) 0%, transparent 70%),
-         radial-gradient(ellipse 50% 60% at 80% 70%, rgba(255,110,160,0.15) 0%, transparent 70%),
-         radial-gradient(ellipse 40% 40% at 60% 15%, rgba(0,150,255,0.12) 0%, transparent 60%)`,
+      ? `radial-gradient(ellipse 60% 50% at 20% 30%, rgba(120,80,255,0.20) 0%, transparent 70%),
+         radial-gradient(ellipse 50% 60% at 80% 70%, rgba(255,100,150,0.12) 0%, transparent 70%)`
+      : `radial-gradient(ellipse 60% 50% at 20% 30%, rgba(140,100,255,0.12) 0%, transparent 70%),
+         radial-gradient(ellipse 50% 60% at 80% 70%, rgba(255,110,160,0.08) 0%, transparent 70%)`,
+    borderRadius: 28,
+    overflow: "hidden",
   };
 
   const labelColor = isDark
@@ -320,6 +325,7 @@ export function FloatingCardList({
             display: "flex",
             flexDirection: "column",
             gap: 12,
+            contain: "layout style paint",
           }}
         >
           {label && (
