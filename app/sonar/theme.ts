@@ -35,6 +35,21 @@ export const getTheme = (isDark: boolean) => isDark ? darkTheme : lightTheme;
 export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Disable text selection globally to avoid accidental selection on mobile */
+  html, body, .phone, .screen, .content-area, * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Re-enable selection for interactive controls and editable content */
+  input, textarea, select, button, a, [contenteditable] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
   html, body { width: 100%; height: 100vh; }
   body { 
     background: ${colors.bg}; 
