@@ -1,11 +1,30 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useThemeClient } from "../sonar/ThemeContext";
 import { getTheme, getGlobalCSS } from "../sonar/theme";
 
 export default function Login() {
+  const router = useRouter();
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/me');
+        if (!mounted) return;
+        if (res.ok) {
+          router.replace('/sonar/home');
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [router]);
+
   return (
     <Suspense>
       <LoginForm />
