@@ -112,7 +112,6 @@ export default function Profile() {
       background: ${COLORS.surface};
       border: 0.5px solid ${COLORS.glassBorder};
       border-radius: 20px;
-      backdrop-filter: blur(20px);
       transition: all 0.2s;
     }
 

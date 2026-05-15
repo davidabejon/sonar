@@ -54,9 +54,9 @@ export default function Register() {
 
   return (
     <>
-      <style>{css}</style>
-      <div className="phone">
-        <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 32px", gap: 0, width: "100%", maxWidth: 390 }}>
+      <style suppressHydrationWarning>{css}</style>
+      <div className="phone" suppressHydrationWarning>
+        <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 32px", gap: 0, width: "100%", maxWidth: 390 }} suppressHydrationWarning>
           {/* Logo */}
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <div style={{
@@ -72,8 +72,8 @@ export default function Register() {
                 ))}
               </div>
             </div>
-            <h1 style={{ fontSize: 32, fontWeight: 300, letterSpacing: -0.5, color: COLORS.text }}>sonar</h1>
-            <p style={{ fontSize: 15, color: COLORS.textSecondary, marginTop: 6, fontWeight: 300 }}>crea tu cuenta</p>
+            <h1 style={{ fontSize: 32, fontWeight: 300, letterSpacing: -0.5, color: COLORS.text }} suppressHydrationWarning>sonar</h1>
+            <p style={{ fontSize: 15, color: COLORS.textSecondary, marginTop: 6, fontWeight: 300 }} suppressHydrationWarning>crea tu cuenta</p>
           </div>
 
           {/* Form */}

@@ -168,7 +168,6 @@ export default function Detail() {
       background: ${COLORS.surface};
       border: 0.5px solid ${COLORS.glassBorder};
       border-radius: 20px;
-      backdrop-filter: blur(20px);
       transition: all 0.2s;
     }
     .glass-card:hover { background: ${COLORS.surfaceHover}; }
@@ -243,8 +242,6 @@ export default function Detail() {
       border-radius: 14px; color: ${COLORS.text};
       font-size: 18px; padding: 14px 16px; width: 100%;
       outline: none;
-      backdrop-filter: blur(16px) saturate(1.6);
-      -webkit-backdrop-filter: blur(16px) saturate(1.6);
       box-shadow: ${COLORS.cardShadow};
       text-align: center; font-weight: 500; font-family: monospace;
       transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;

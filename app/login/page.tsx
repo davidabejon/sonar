@@ -55,8 +55,8 @@ function LoginForm() {
   return (
     <>
       <style suppressHydrationWarning>{css}</style>
-      <div className="phone">
-        <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 32px", gap: 0, width: "100%", maxWidth: 390 }}>
+      <div className="phone" suppressHydrationWarning>
+        <div style={{ height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 32px", gap: 0, width: "100%", maxWidth: 390 }} suppressHydrationWarning>
           {/* Logo */}
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <div style={{
@@ -72,8 +72,8 @@ function LoginForm() {
                 ))}
               </div>
             </div>
-            <h1 style={{ fontSize: 32, fontWeight: 300, letterSpacing: -0.5, color: COLORS.text }}>sonar</h1>
-            <p style={{ fontSize: 15, color: COLORS.textSecondary, marginTop: 6, fontWeight: 300 }}>tu música, tu memoria</p>
+            <h1 style={{ fontSize: 32, fontWeight: 300, letterSpacing: -0.5, color: COLORS.text }} suppressHydrationWarning>sonar</h1>
+            <p style={{ fontSize: 15, color: COLORS.textSecondary, marginTop: 6, fontWeight: 300 }} suppressHydrationWarning>tu música, tu memoria</p>
           </div>
 
           {/* Form */}
@@ -82,7 +82,7 @@ function LoginForm() {
             <input className="input-field" value={pass} onChange={e => setPass(e.target.value)} placeholder="contraseña" type="password" autoComplete="current-password" />
 
             <div style={{ textAlign: "right", marginTop: 2 }}>
-              <span style={{ fontSize: 13, color: COLORS.accent, cursor: "pointer" }}>¿Olvidaste tu contraseña?</span>
+              <span style={{ fontSize: 13, color: COLORS.accent, cursor: "pointer" }} suppressHydrationWarning>¿Olvidaste tu contraseña?</span>
             </div>
 
             {error && (

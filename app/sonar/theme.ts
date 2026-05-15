@@ -6,9 +6,9 @@ export const darkTheme = {
   text: "rgba(255,255,255,0.95)",
   textSecondary: "rgba(255,255,255,0.55)",
   textTertiary: "rgba(255,255,255,0.35)",
-  surface: "rgba(255,255,255,0.11)",
-  surfaceHover: "rgba(255,255,255,0.18)",
-  glass: "rgba(255,255,255,0.11)",
+  surface: "rgba(255,255,255,0.14)", // Increased opacity to compensate for no blur
+  surfaceHover: "rgba(255,255,255,0.22)", // Increased opacity
+  glass: "rgba(255,255,255,0.14)",
   glassBorder: "rgba(255,255,255,0.22)",
   cardShadow: "0 2px 20px rgba(0,0,0,0.12), inset 0 0.5px 0 rgba(255,255,255,0.30)",
   cardShadowHover: "0 8px 32px rgba(0,0,0,0.20), inset 0 0.5px 0 rgba(255,255,255,0.40)",
@@ -22,9 +22,9 @@ export const lightTheme = {
   text: "rgba(20,10,50,0.90)",
   textSecondary: "rgba(60,40,100,0.65)",
   textTertiary: "rgba(60,40,100,0.45)",
-  surface: "rgba(255,255,255,0.52)",
-  surfaceHover: "rgba(255,255,255,0.68)",
-  glass: "rgba(255,255,255,0.52)",
+  surface: "rgba(255,255,255,0.68)", // Increased opacity
+  surfaceHover: "rgba(255,255,255,0.82)", // Increased opacity
+  glass: "rgba(255,255,255,0.68)",
   glassBorder: "rgba(255,255,255,0.70)",
   cardShadow: "0 2px 16px rgba(80,60,160,0.10), inset 0 0.5px 0 rgba(255,255,255,0.80)",
   cardShadowHover: "0 8px 28px rgba(80,60,160,0.18), inset 0 0.5px 0 rgba(255,255,255,0.90)",
@@ -77,9 +77,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     position: relative; z-index: 50;
     display: flex; align-items: center; gap: 12px;
     padding: calc(24px + env(safe-area-inset-top, 0px)) 20px 14px;
-    background: ${isDark ? 'rgba(26,26,46,0.72)' : 'rgba(224,228,248,0.72)'};
-    backdrop-filter: blur(28px) saturate(1.8);
-    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    background: ${isDark ? 'rgba(26,26,46,0.85)' : 'rgba(224,228,248,0.85)'};
     border-bottom: 0.5px solid ${colors.glassBorder};
     box-shadow: ${isDark ? '0 1px 0 rgba(255,255,255,0.06)' : '0 1px 0 rgba(255,255,255,0.60)'};
     flex-shrink: 0;
@@ -95,8 +93,6 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     padding: 0 16px;
     cursor: pointer;
     box-shadow: ${colors.cardShadow};
-    backdrop-filter: blur(12px) saturate(1.4);
-    -webkit-backdrop-filter: blur(12px) saturate(1.4);
     transition: all 0.25s cubic-bezier(.34,1.56,.64,1);
   }
   .search-bar:hover { 
@@ -128,9 +124,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     position: relative; z-index: 50;
     display: flex; align-items: center; justify-content: space-around;
     padding: 12px 20px calc(28px + env(safe-area-inset-bottom, 0px));
-    background: ${isDark ? 'rgba(26,26,46,0.72)' : 'rgba(224,228,248,0.72)'};
-    backdrop-filter: blur(28px) saturate(1.8);
-    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    background: ${isDark ? 'rgba(26,26,46,0.85)' : 'rgba(224,228,248,0.85)'};
     border-top: 0.5px solid ${colors.glassBorder};
     box-shadow: ${isDark ? '0 -1px 0 rgba(255,255,255,0.06)' : '0 -1px 0 rgba(255,255,255,0.60)'};
     flex-shrink: 0;
@@ -152,8 +146,6 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     background: ${colors.surface};
     border: 0.5px solid ${colors.glassBorder};
     border-radius: 20px;
-    backdrop-filter: blur(28px) saturate(1.8);
-    -webkit-backdrop-filter: blur(28px) saturate(1.8);
     box-shadow: ${colors.cardShadow};
     transition: background 0.25s, box-shadow 0.25s, transform 0.25s cubic-bezier(.34,1.56,.64,1);
   }
@@ -167,7 +159,6 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     background: ${isDark ? 'rgba(167,139,250,0.14)' : 'rgba(124,58,237,0.10)'};
     border: 0.5px solid ${isDark ? 'rgba(167,139,250,0.28)' : 'rgba(124,58,237,0.22)'};
     color: ${colors.accent};
-    backdrop-filter: blur(8px);
     transition: background 0.2s;
   }
 
@@ -181,7 +172,6 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     border: 0.5px solid ${isDark ? 'rgba(167,139,250,0.35)' : 'rgba(124,58,237,0.28)'};
     display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 600; color: ${colors.accent};
-    backdrop-filter: blur(8px);
   }
 
   .input-field {
@@ -190,8 +180,6 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     border-radius: 14px; color: ${colors.text};
     font-size: 16px; padding: 16px 18px; width: 100%;
     outline: none;
-    backdrop-filter: blur(16px) saturate(1.6);
-    -webkit-backdrop-filter: blur(16px) saturate(1.6);
     box-shadow: ${colors.cardShadow};
     transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
     font-family: inherit;
@@ -217,7 +205,6 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     border-radius: 14px; color: ${colors.text};
     font-size: 15px; font-weight: 400; padding: 14px 24px;
     width: 100%; cursor: pointer;
-    backdrop-filter: blur(16px);
     box-shadow: ${colors.cardShadow};
     transition: background 0.2s, box-shadow 0.2s, transform 0.2s cubic-bezier(.34,1.56,.64,1);
   }

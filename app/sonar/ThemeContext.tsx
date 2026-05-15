@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 interface ThemeContextType {
   isDarkMode: boolean;
@@ -10,23 +10,42 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window === 'undefined') return true;
+  const [isDarkMode, setIsDarkMode] = useState(true); // Always start with dark mode (server default)
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // After hydration, read from localStorage
     try {
       const saved = localStorage.getItem("sonar-dark-mode");
-      return saved !== null ? saved === "true" : true;
+      if (saved !== null) {
+        setIsDarkMode(saved === "true");
+      }
     } catch {
-      return true;
+      // localStorage not available
     }
-  });
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => {
     setIsDarkMode(prev => {
       const newValue = !prev;
-      localStorage.setItem("sonar-dark-mode", String(newValue));
+      try {
+        localStorage.setItem("sonar-dark-mode", String(newValue));
+      } catch {
+        // localStorage not available
+      }
       return newValue;
     });
   };
+
+  // Return a default context while mounting to prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <ThemeContext.Provider value={{ isDarkMode: true, toggleTheme }}>
+        {children}
+      </ThemeContext.Provider>
+    );
+  }
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>

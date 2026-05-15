@@ -194,8 +194,6 @@ export function FloatingCard({
     borderRadius: 20,
     border: `0.5px solid ${tk.cardBorder}`,
     background: tk.cardBg,
-    backdropFilter: "blur(28px) saturate(1.8)",
-    WebkitBackdropFilter: "blur(28px) saturate(1.8)",
     boxShadow: hovered ? tk.cardShadowHover : tk.cardShadow,
     transform: hovered ? "translateY(-2px) scale(1.012)" : "translateY(0) scale(1)",
     transition:
@@ -389,7 +387,6 @@ export default function App() {
           cursor: "pointer",
           letterSpacing: "-0.1px",
           fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
-          backdropFilter: "blur(12px)",
           transition: "all 0.3s ease",
         }}
         aria-label="Cambiar tema"
