@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true, // Enable gzip compression
   productionBrowserSourceMaps: false, // Reduce bundle size in production
-  optimizeFonts: true, // Optimize fonts
   reactStrictMode: false, // Disable strict mode for low-end devices
   
   // Image optimization
@@ -27,33 +26,10 @@ const nextConfig: NextConfig = {
   },
 
   // Build optimizations
-  swcMinify: true, // Use SWC for minification (faster)
   poweredByHeader: false, // Remove X-Powered-By header
   
-  // Webpack optimizations
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            default: false,
-            vendors: false,
-            // Vendor chunk
-            vendor: {
-              filename: 'chunks/vendor.js',
-              test: /node_modules/,
-              priority: 10,
-              reuseExistingChunk: true,
-              enforce: true,
-            },
-          },
-        },
-      };
-    }
-    return config;
-  },
+  // Turbopack optimizations (Next.js 16 uses Turbopack by default)
+  turbopack: {},
 
   // Headers for caching
   async headers() {
