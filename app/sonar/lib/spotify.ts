@@ -1,7 +1,9 @@
+import { cachedFetch } from "@/app/lib/fetch-cache";
+
 async function spotifyRequest(params: Record<string, string>) {
   const url = new URL("/api/spotify", window.location.origin);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const response = await fetch(url.toString());
+  const response = await cachedFetch(url.toString(), undefined, 10 * 60 * 1000); // 10 min cache
   if (!response.ok) {
     throw new Error(`Spotify request failed: ${response.statusText}`);
   }

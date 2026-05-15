@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useThemeClient } from "../ThemeContext";
 import { useSearch } from "../SearchContext";
@@ -21,19 +21,87 @@ const Icon = {
   ),
 };
 
-function AlbumArt({ color, size = 52, emoji = "🎵" }: { color: string; size?: number; emoji?: string }) {
+const AlbumArt = memo(function AlbumArt({ color, size = 52, emoji = "🎵" }: { color: string; size?: number; emoji?: string }) {
   return (
     <div className="album-art" style={{ width: size, height: size, background: `linear-gradient(135deg, ${color}33, ${color}11)`, borderColor: `${color}22` }}>
       <span style={{ fontSize: size * 0.4 }}>{emoji}</span>
     </div>
   );
-}
+});
+
+const SearchResultRow = memo(function SearchResultRow({ 
+  item, 
+  color, 
+  colors,
+  index,
+  COLORS,
+  onNavigate 
+}: any) {
+  if (item.type === "track") {
+    return (
+      <div key={item.id} className="list-row" onClick={() => onNavigate(item.id, 'track')} style={{ cursor: 'pointer' }}>
+        {item.image
+          ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} loading="lazy" />
+          : <AlbumArt color={colors[index % colors.length]} size={52} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.artist}</div>
+          <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            {item.album && <span className="tag">{item.album}</span>}
+            {item.release_date && <span className="tag">{item.release_date.substring(0, 4)}</span>}
+            {item.duration_ms > 0 && <span className="tag">{Math.floor(item.duration_ms / 60000)}:{String(Math.floor((item.duration_ms % 60000) / 1000)).padStart(2, "0")}</span>}
+            {item.explicit && <span className="tag">E</span>}
+          </div>
+        </div>
+        <div style={{ color: COLORS.textTertiary, width: 18, height: 18, flexShrink: 0 }}><Icon.ChevronRight /></div>
+      </div>
+    );
+  } else if (item.type === "artist") {
+    return (
+      <div key={item.id} className="list-row" onClick={() => onNavigate(item.id, 'artist')} style={{ cursor: 'pointer' }}>
+        {item.image
+          ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} loading="lazy" />
+          : <AlbumArt color={colors[index % colors.length]} size={52} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.genres?.slice(0, 2).join(", ") || "Artista"}</div>
+          <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            {item.followers > 0 && <span className="tag">{item.followers.toLocaleString()} seguidores</span>}
+            {item.popularity > 0 && <span className="tag">Pop: {item.popularity}</span>}
+          </div>
+        </div>
+        <div style={{ color: COLORS.textTertiary, width: 18, height: 18, flexShrink: 0 }}><Icon.ChevronRight /></div>
+      </div>
+    );
+  } else if (item.type === "album") {
+    return (
+      <div key={item.id} className="list-row" onClick={() => onNavigate(item.id, 'album')} style={{ cursor: 'pointer' }}>
+        {item.image
+          ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} loading="lazy" />
+          : <AlbumArt color={colors[index % colors.length]} size={52} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.artist}</div>
+          <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+            {item.album_type && <span className="tag">{item.album_type}</span>}
+            {item.release_date && <span className="tag">{item.release_date.substring(0, 4)}</span>}
+            {item.total_tracks && <span className="tag">{item.total_tracks} pistas</span>}
+          </div>
+        </div>
+        <div style={{ color: COLORS.textTertiary, width: 18, height: 18, flexShrink: 0 }}><Icon.ChevronRight /></div>
+      </div>
+    );
+  }
+  return null;
+});
 
 export default function Search() {
   const router = useRouter();
   const { isDarkMode } = useThemeClient();
   const { query, setQuery } = useSearch();
   const COLORS = getTheme(isDarkMode);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [debouncing, setDebouncing] = useState(false);
@@ -41,7 +109,9 @@ export default function Search() {
   const [results, setResults] = useState<any[]>([]);
   const [displayLimit, setDisplayLimit] = useState(10);
 
-  // Debounce effect - espera 800ms antes de actualizar debouncedQuery
+  const colors = ["#FF6B6B", "#A78BFA", "#34D399", "#FBBF24", "#F97316", "#60A5FA"];
+
+  // Improved debounce with ref to avoid memory leaks
   useEffect(() => {
     if (!query.trim()) {
       setDebouncedQuery("");
@@ -52,12 +122,20 @@ export default function Search() {
     }
 
     setDebouncing(true);
-    const timer = setTimeout(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
       setDebouncedQuery(query);
       setDebouncing(false);
-    }, 800);
+    }, 500); // Reduced from 800ms
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
   }, [query]);
 
   // Auto-search when debouncedQuery changes
@@ -66,6 +144,28 @@ export default function Search() {
       handleSearch(debouncedQuery);
     }
   }, [debouncedQuery]);
+
+  const handleSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
+    
+    setLoading(true);
+    setSearched(true);
+    setDisplayLimit(10);
+    
+    try {
+      const data = await searchAll(searchQuery, 20); // Increased limit for better caching
+      setResults(data);
+    } catch (error) {
+      console.error("Search error:", error);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleNavigate = useCallback((id: string, type: string) => {
+    router.push(`/sonar/detail?id=${id}&type=${type}`);
+  }, [router]);
 
   const css = `
     .glass-card {
@@ -76,12 +176,6 @@ export default function Search() {
       transition: all 0.2s;
     }
     .glass-card:hover { background: ${COLORS.surfaceHover}; }
-
-    .section-label {
-      font-size: 11px; font-weight: 600; letter-spacing: 1px;
-      color: ${COLORS.textTertiary}; text-transform: uppercase;
-      margin-bottom: 12px;
-    }
 
     .tag {
       display: inline-flex; align-items: center;
@@ -96,7 +190,7 @@ export default function Search() {
       display: flex; align-items: center; gap: 14px;
       padding: 14px 0;
       border-bottom: 0.5px solid ${COLORS.glassBorder};
-      cursor: pointer; transition: opacity 0.15s;
+      transition: opacity 0.15s;
     }
     .list-row:hover { opacity: 0.75; }
     .list-row:last-child { border-bottom: none; }
@@ -115,34 +209,15 @@ export default function Search() {
       color: ${COLORS.textTertiary};
     }
     .empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5; }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
   `;
-
-  const handleSearch = async (searchQuery: string) => {
-    if (!searchQuery.trim()) return;
-    
-    setLoading(true);
-    setSearched(true);
-    setDisplayLimit(10);
-    
-    try {
-      const data = await searchAll(searchQuery, 10);
-      setResults(data);
-    } catch (error) {
-      console.error("Search error:", error);
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch(query);
-    }
-  };
-
-  const colors = ["#FF6B6B", "#A78BFA", "#34D399", "#FBBF24", "#F97316", "#60A5FA"];
-  const emojis = ["🎵", "🎸", "🎹", "🎤", "🥁", "🎺"];
 
   return (
     <>
@@ -172,63 +247,17 @@ export default function Search() {
                   <p style={{ fontSize: 13, color: COLORS.textSecondary }}>Resultados encontrados: {results.length}</p>
                 </div>
                 <div className="glass-card" style={{ padding: "0 16px", marginBottom: 24 }}>
-                  {results.slice(0, displayLimit).map((item: any, i: number) => {
-                    if (item.type === "track") {
-                      return (
-                        <div key={item.id} className="list-row" onClick={() => router.push(`/sonar/detail?id=${item.id}&type=track`)}>
-                          {item.image
-                            ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-                            : <AlbumArt color={colors[i % colors.length]} size={52} />}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                            <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.artist}</div>
-                            <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                              {item.album && <span className="tag">{item.album}</span>}
-                              {item.release_date && <span className="tag">{item.release_date.substring(0, 4)}</span>}
-                              {item.duration_ms > 0 && <span className="tag">{Math.floor(item.duration_ms / 60000)}:{String(Math.floor((item.duration_ms % 60000) / 1000)).padStart(2, "0")}</span>}
-                              {item.explicit && <span className="tag">E</span>}
-                            </div>
-                          </div>
-                          <div style={{ color: COLORS.textTertiary, width: 18, height: 18, flexShrink: 0 }}><Icon.ChevronRight /></div>
-                        </div>
-                      );
-                    } else if (item.type === "artist") {
-                      return (
-                        <div key={item.id} className="list-row" onClick={() => router.push(`/sonar/detail?id=${item.id}&type=artist`)}>
-                          {item.image
-                            ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-                            : <AlbumArt color={colors[i % colors.length]} size={52} />}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                            <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.genres?.slice(0, 2).join(", ") || "Artista"}</div>
-                            <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                              {item.followers > 0 && <span className="tag">{item.followers.toLocaleString()} seguidores</span>}
-                              {item.popularity > 0 && <span className="tag">Pop: {item.popularity}</span>}
-                            </div>
-                          </div>
-                          <div style={{ color: COLORS.textTertiary, width: 18, height: 18, flexShrink: 0 }}><Icon.ChevronRight /></div>
-                        </div>
-                      );
-                    } else if (item.type === "album") {
-                      return (
-                        <div key={item.id} className="list-row" onClick={() => router.push(`/sonar/detail?id=${item.id}&type=album`)}>
-                          {item.image
-                            ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-                            : <AlbumArt color={colors[i % colors.length]} size={52} />}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
-                            <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.artist}</div>
-                            <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-                              {item.album_type && <span className="tag">{item.album_type}</span>}
-                              {item.release_date && <span className="tag">{item.release_date.substring(0, 4)}</span>}
-                              {item.total_tracks && <span className="tag">{item.total_tracks} pistas</span>}
-                            </div>
-                          </div>
-                          <div style={{ color: COLORS.textTertiary, width: 18, height: 18, flexShrink: 0 }}><Icon.ChevronRight /></div>
-                        </div>
-                      );
-                    }
-                  })}
+                  {results.slice(0, displayLimit).map((item, i) => (
+                    <SearchResultRow 
+                      key={item.id}
+                      item={item}
+                      color={colors[i % colors.length]}
+                      colors={colors}
+                      index={i}
+                      COLORS={COLORS}
+                      onNavigate={handleNavigate}
+                    />
+                  ))}
                 </div>
                 {displayLimit < results.length && (
                   <button
@@ -269,16 +298,6 @@ export default function Search() {
             <p style={{ fontSize: 15, marginBottom: 8 }}>Busca artistas, canciones o álbumes</p>
           </div>
         )}
-
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-          }
-        `}</style>
       </div>
     </>
   );

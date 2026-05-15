@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useThemeClient } from "../ThemeContext";
 import { getTheme } from "../theme";
@@ -17,15 +17,15 @@ const Icon = {
   ),
 };
 
-function AlbumArt({ src, size = 52, fallback = "🎵" }: { src?: string | null; size?: number; fallback?: string }) {
+const AlbumArt = memo(function AlbumArt({ src, size = 52, fallback = "🎵" }: { src?: string | null; size?: number; fallback?: string }) {
   return (
     <div className="album-art" style={{ width: size, height: size, borderRadius: 12, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {src ? <img src={src} alt="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: size * 0.4 }}>{fallback}</span>}
     </div>
   );
-}
+});
 
-function Stars({ score }: { score: number }) {
+const Stars = memo(function Stars({ score }: { score: number }) {
   const full = Math.floor(score / 2);
   const half = score % 2 >= 1 ? 1 : 0;
   return (
@@ -37,7 +37,20 @@ function Stars({ score }: { score: number }) {
       ))}
     </div>
   );
-}
+});
+
+const StatCard = memo(function StatCard({ label, value, colors }: { label: string; value: string; colors: any }) {
+  return (
+    <div className="glass-card" style={{ flex: 1, padding: "14px 12px", textAlign: "center" }}>
+      <div style={{ fontSize: 20, fontWeight: 300, marginBottom: 4, letterSpacing: -0.5 }}>{value}</div>
+      <div style={{ fontSize: 11, color: colors.textTertiary, fontWeight: 500, letterSpacing: 0.3 }}>{label}</div>
+    </div>
+  );
+});
+
+const GenreTag = memo(function GenreTag({ genre }: { genre: string }) {
+  return <span className="tag">{genre}</span>;
+});
 
 export default function Home() {
   const router = useRouter();
@@ -50,9 +63,9 @@ export default function Home() {
   const [avgScore, setAvgScore] = useState<number | null>(null);
   const [genres, setGenres] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  
 
-  async function lookupEntry(entryId: string, entryType: string) {
+  // Memoized lookup function
+  const lookupEntry = useCallback(async (entryId: string, entryType: string) => {
     try {
       const url = '/api/spotify?action=lookup&type=' + encodeURIComponent(String(entryType)) + '&id=' + encodeURIComponent(String(entryId));
       const res = await fetch(url);
@@ -63,15 +76,17 @@ export default function Home() {
     } catch (err) {
       return { name: entryId, subtitle: entryType, image: undefined, genres: [] };
     }
-  }
+  }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     (async () => {
       setLoading(true);
       try {
         const [userRes, recentRes] = await Promise.all([
-          fetch('/api/me'),
-          fetch('/api/ratings?sort=createdAt&limit=6'),
+          fetch('/api/me', { signal: controller.signal }),
+          fetch('/api/ratings?sort=createdAt&limit=6', { signal: controller.signal }),
         ]);
 
         const userData = await userRes.json();
@@ -86,25 +101,36 @@ export default function Home() {
         setTotalCount(total);
 
         if (recentData.length > 0) {
-          // Compute average from all ratings - fetch once separately if needed
-          // For now, we'll calculate average only from the recent items as a proxy
+          // Compute average from all ratings
           const avg = recentData.reduce((s, r) => s + Number(r.score), 0) / recentData.length;
           setAvgScore(Math.round(avg * 10) / 10);
 
-          const enriched = await Promise.all(recentData.map(async r => ({ ...r, ...(await lookupEntry(r.entryId, r.entryType)) })));
+          // Parallelize lookups efficiently
+          const enriched = await Promise.all(
+            recentData.map(async r => ({ ...r, ...(await lookupEntry(r.entryId, r.entryType)) }))
+          );
           setRecent(enriched as RatingWithMeta[]);
 
+          // Extract and deduplicate genres
           const allGenres = new Set<string>();
           enriched.forEach((e: any) => (e.genres || []).slice(0, 3).forEach((g: string) => allGenres.add(g)));
           setGenres(Array.from(allGenres).slice(0, 7));
         }
       } catch (err) {
-        console.error('Home load error', err);
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Home load error', err);
+        }
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+
+    return () => controller.abort(); // Cancel requests on unmount
+  }, [lookupEntry]);
+
+  const handleNavigate = useCallback((entryType: string, entryId: string) => {
+    router.push('/sonar/detail?type=' + encodeURIComponent(String(entryType)) + '&id=' + encodeURIComponent(String(entryId)));
+  }, [router]);
 
   return (
     <>
@@ -115,12 +141,9 @@ export default function Home() {
         </div>
 
         <div style={{ display: "flex", gap: 10, marginBottom: 32 }}>
-          {[{ label: "Escuchadas", value: totalCount === null ? "…" : String(totalCount) }, { label: "Promedio", value: avgScore === null ? "…" : String((avgScore/10).toFixed(1)) }, { label: "Géneros", value: genres.length }].map(s => (
-            <div key={s.label} className="glass-card" style={{ flex: 1, padding: "14px 12px", textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontWeight: 300, marginBottom: 4, letterSpacing: -0.5 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: COLORS.textTertiary, fontWeight: 500, letterSpacing: 0.3 }}>{s.label}</div>
-            </div>
-          ))}
+          <StatCard label="Escuchadas" value={totalCount === null ? "…" : String(totalCount)} colors={COLORS} />
+          <StatCard label="Promedio" value={avgScore === null ? "…" : String((avgScore/10).toFixed(1))} colors={COLORS} />
+          <StatCard label="Géneros" value={String(genres.length)} colors={COLORS} />
         </div>
 
         <div style={{ marginBottom: 28 }}>
@@ -135,7 +158,7 @@ export default function Home() {
                 title: r.name,
                 subtitle: r.subtitle,
                 score: r.score/10,
-                onClick: () => router.push('/sonar/detail?type=' + encodeURIComponent(String(r.entryType)) + '&id=' + encodeURIComponent(String(r.entryId)))
+                onClick: () => handleNavigate(r.entryType, r.entryId)
               }))}
               label="Recientes"
               theme={isDarkMode ? "dark" : "light"}
@@ -147,7 +170,7 @@ export default function Home() {
         <div>
           <div className="section-label">Tus géneros</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {genres.length === 0 ? <span className="tag">—</span> : genres.map(g => <span key={g} className="tag">{g}</span>)}
+            {genres.length === 0 ? <span className="tag">—</span> : genres.map(g => <GenreTag key={g} genre={g} />)}
           </div>
         </div>
       </div>

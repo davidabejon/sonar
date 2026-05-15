@@ -76,7 +76,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   .top-bar {
     position: relative; z-index: 50;
     display: flex; align-items: center; gap: 12px;
-    padding: 24px 20px 14px;
+    padding: calc(24px + env(safe-area-inset-top, 0px)) 20px 14px;
     background: ${isDark ? 'rgba(26,26,46,0.72)' : 'rgba(224,228,248,0.72)'};
     backdrop-filter: blur(28px) saturate(1.8);
     -webkit-backdrop-filter: blur(28px) saturate(1.8);
@@ -127,7 +127,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   .bottom-nav {
     position: relative; z-index: 50;
     display: flex; align-items: center; justify-content: space-around;
-    padding: 12px 20px 28px;
+    padding: 12px 20px calc(28px + env(safe-area-inset-bottom, 0px));
     background: ${isDark ? 'rgba(26,26,46,0.72)' : 'rgba(224,228,248,0.72)'};
     backdrop-filter: blur(28px) saturate(1.8);
     -webkit-backdrop-filter: blur(28px) saturate(1.8);
@@ -224,7 +224,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   .btn-ghost:hover { background: ${colors.surfaceHover}; box-shadow: ${colors.cardShadowHover}; transform: translateY(-1px); }
   .btn-ghost:disabled { opacity: 0.5; cursor: default; transform: none; }
 
-  .content-area { position: relative; z-index: 1; padding: 10px 20px 120px; flex: 1; display: flex; flex-direction: column; }
+  .content-area { position: relative; z-index: 1; padding: 10px 20px calc(120px + env(safe-area-inset-bottom, 0px)); flex: 1; display: flex; flex-direction: column; }
 
   ::-webkit-scrollbar { width: 0; }
 `;
