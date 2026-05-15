@@ -52,6 +52,13 @@ function LoginForm() {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (!loading) handleLogin();
+    }
+  };
+
   return (
     <>
       <style suppressHydrationWarning>{css}</style>
@@ -78,8 +85,8 @@ function LoginForm() {
 
           {/* Form */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <input className="input-field" value={emailOrUsername} onChange={e => setEmailOrUsername(e.target.value)} placeholder="correo electrónico o usuario" type="text" autoComplete="username" />
-            <input className="input-field" value={pass} onChange={e => setPass(e.target.value)} placeholder="contraseña" type="password" autoComplete="current-password" />
+            <input className="input-field" value={emailOrUsername} onChange={e => setEmailOrUsername(e.target.value)} onKeyDown={handleKeyDown} placeholder="correo electrónico o usuario" type="text" autoComplete="username" />
+            <input className="input-field" value={pass} onChange={e => setPass(e.target.value)} onKeyDown={handleKeyDown} placeholder="contraseña" type="password" autoComplete="current-password" />
 
             <div style={{ textAlign: "right", marginTop: 2 }}>
               <span style={{ fontSize: 13, color: COLORS.accent, cursor: "pointer" }} suppressHydrationWarning>¿Olvidaste tu contraseña?</span>
@@ -89,10 +96,10 @@ function LoginForm() {
               <p style={{ fontSize: 13, color: "#f87171", textAlign: "center", margin: 0 }}>{error}</p>
             )}
 
-            <button className="btn-primary" onClick={handleLogin} disabled={loading} style={{ marginTop: 8, opacity: loading ? 0.7 : undefined }}>
+            <button type="button" className="btn-primary" onClick={handleLogin} disabled={loading} style={{ marginTop: 8, opacity: loading ? 0.7 : undefined }}>
               {loading ? "Entrando…" : "Entrar"}
             </button>
-            <button className="btn-ghost" onClick={() => router.push("/register")} disabled={loading}>Crear cuenta</button>
+            <button type="button" className="btn-ghost" onClick={() => router.push("/register")} disabled={loading}>Crear cuenta</button>
           </div>
         </div>
       </div>
