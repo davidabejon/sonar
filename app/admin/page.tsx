@@ -273,7 +273,7 @@ export default function AdminPanel() {
   return (
     <>
       <style>{css}</style>
-      <div className="content-area" style={{ paddingTop: 12 }}>
+      <div className="content-area" style={{ paddingTop: 12, maxWidth: 480, margin: "0 auto", width: "100%" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
           <button

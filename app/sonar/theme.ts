@@ -65,6 +65,8 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
     overflow: hidden;
     position: relative;
     --bottom-nav-height: 72px;
+    max-width: 480px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     transition: background 0.4s;
@@ -137,13 +139,16 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   .avatar-btn:hover { transform: scale(1.08); box-shadow: 0 0 0 3px rgba(167,139,250,0.35), 0 4px 20px rgba(99,102,241,0.40); }
 
   .bottom-nav {
-    /* Fixed to viewport bottom and respect safe area */
+    /* Fixed to viewport bottom but constrained to app width and centered */
     --bottom-nav-height: var(--bottom-nav-height, 72px);
     position: fixed;
-    left: 0;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
     bottom: env(safe-area-inset-bottom, 0px);
     z-index: 60;
+    width: 100%;
+    max-width: 480px;
+    box-sizing: border-box;
     height: var(--bottom-nav-height);
     display: flex; align-items: center; justify-content: space-around;
     padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px));
