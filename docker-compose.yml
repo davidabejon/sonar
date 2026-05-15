@@ -4,8 +4,7 @@ services:
     restart: always
     env_file: ./.env.production
     volumes:
-      - ./data/dev.db:/app/prisma/dev.db
-      - ./prisma:/app/prisma:ro
+      - ./prisma:/app/prisma
     expose:
       - 3000
     healthcheck:
