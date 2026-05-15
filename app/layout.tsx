@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { GlobalStyles } from "./GlobalStyles";
 
 export const metadata: Metadata = {
   title: "sonar - tu música, tu memoria",
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+        <GlobalStyles />
       </head>
       <body style={{ margin: 0, padding: 0, width: "100%", minHeight: "100svh" }}>
         <Providers>{children}</Providers>
