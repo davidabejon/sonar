@@ -1,0 +1,11 @@
+node_modules
+.next
+Dockerfile
+docker-compose.yml
+docker/
+.env*
+.vscode
+.git
+npm-debug.log
+pnpm-lock.yaml
+yarn.lock

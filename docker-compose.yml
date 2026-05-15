@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    restart: always
+    env_file: ./.env.production
+    volumes:
+      - ./data/dev.db:/app/prisma/dev.db
+      - ./prisma:/app/prisma:ro
+    expose:
+      - 3000
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "127.0.0.1:5100:80"   # binds nginx to localhost:5100 to avoid colliding with host nginx
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+
+# Notes:
+# - The compose binds nginx to 127.0.0.1:5100 so host nginx can proxy to it, avoiding port conflicts.
+# - Mount your SQLite DB at ./data/dev.db on the host so Docker persists DB to the host filesystem.
+# - Run `docker-compose up -d --build` to start.
