@@ -73,13 +73,16 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   }
 
   /* Ambient blob layer — mirrors FloatingCard blobs */
-  .phone::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background: ${isDark
+    .phone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      will-change: transform, opacity;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      background: ${isDark
       ? `radial-gradient(ellipse 60% 50% at 20% 25%, rgba(120,80,255,0.30) 0%, transparent 65%),
          radial-gradient(ellipse 50% 55% at 82% 70%, rgba(255,100,150,0.20) 0%, transparent 65%),
          radial-gradient(ellipse 40% 40% at 62% 12%, rgba(0,200,255,0.15) 0%, transparent 55%)`
@@ -89,6 +92,7 @@ export const getGlobalCSS = (colors: typeof darkTheme, isDark: boolean) => `
   }
 
   .screen { position: relative; z-index: 1; width: 100%; flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; display: flex; flex-direction: column; }
+    .screen { position: relative; z-index: 1; width: 100%; flex: 1; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
   .screen::-webkit-scrollbar { display: none; }
 
   .top-bar {
