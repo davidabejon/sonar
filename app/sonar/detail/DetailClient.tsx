@@ -767,7 +767,14 @@ export default function Detail() {
                       <div key={t.id || idx} className="list-row" onClick={() => t.id && router.push(`/sonar/detail?id=${t.id}&type=track`)}>
                         <div style={{ width: 34, textAlign: "right", color: COLORS.textTertiary, fontSize: 13 }}>{t.track_number || idx + 1}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 15, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
+                          <div style={{ fontSize: 15, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+                            {t.name}
+                            {t.isRated && (
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16, color: COLORS.accent, flexShrink: 0, pointerEvents: 'none', userSelect: 'none' }}>
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                              </svg>
+                            )}
+                          </div>
                           <div style={{ fontSize: 12, color: COLORS.textTertiary }}>{t.artists || data.artist}</div>
                         </div>
                         <div style={{ color: COLORS.textTertiary, flexShrink: 0, marginLeft: 8 }}>{t.duration_ms ? `${Math.floor(t.duration_ms / 60000)}:${String(Math.floor((t.duration_ms % 60000) / 1000)).padStart(2, "0")}` : ""}</div>

@@ -44,7 +44,14 @@ const SearchResultRow = memo(function SearchResultRow({
           ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} loading="lazy" />
           : <AlbumArt color={colors[index % colors.length]} size={52} />}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+            {item.name}
+            {item.isRated && (
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16, color: COLORS.accent, flexShrink: 0, pointerEvents: 'none', userSelect: 'none' }}>
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+            )}
+          </div>
           <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.artist}</div>
           <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             {item.album && <span className="tag">{item.album}</span>}
@@ -63,7 +70,14 @@ const SearchResultRow = memo(function SearchResultRow({
           ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} loading="lazy" />
           : <AlbumArt color={colors[index % colors.length]} size={52} />}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+            {item.name}
+            {item.isRated && (
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16, color: COLORS.accent, flexShrink: 0, pointerEvents: 'none', userSelect: 'none' }}>
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+            )}
+          </div>
           <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.genres?.slice(0, 2).join(", ") || "Artista"}</div>
           <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             {item.followers > 0 && <span className="tag">{item.followers.toLocaleString()} seguidores</span>}
@@ -80,7 +94,14 @@ const SearchResultRow = memo(function SearchResultRow({
           ? <img src={item.image} alt={item.name} style={{ width: 52, height: 52, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} loading="lazy" />
           : <AlbumArt color={colors[index % colors.length]} size={52} />}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+          <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+            {item.name}
+            {item.isRated && (
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16, color: COLORS.accent, flexShrink: 0, pointerEvents: 'none', userSelect: 'none' }}>
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+            )}
+          </div>
           <div style={{ fontSize: 13, color: COLORS.textSecondary, marginBottom: 4 }}>{item.artist}</div>
           <div style={{ fontSize: 11, color: COLORS.textTertiary, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             {item.album_type && <span className="tag">{item.album_type}</span>}

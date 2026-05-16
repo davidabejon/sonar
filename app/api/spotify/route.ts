@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/app/lib/auth";
+import { prisma } from "@/app/lib/prisma";
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
 const API_BASE = "https://api.spotify.com/v1";
@@ -239,6 +241,36 @@ export async function GET(request: NextRequest) {
       // Remove _score before sending (keep all results for client-side pagination)
       finalResults.forEach(r => delete r._score);
 
+      // Get user ID from session to check for rated items
+      let userId: string | null = null;
+      try {
+        const token = request.cookies.get("session")?.value;
+        if (token) {
+          const session = await getSession(token);
+          if (session) {
+            userId = session.user.id;
+          }
+        }
+      } catch (err) {
+        console.warn("Could not get user session for ratings check:", err);
+      }
+
+      // Check which items are already rated by the user
+      if (userId) {
+        const userRatings = await prisma.rating.findMany({
+          where: { userId },
+          select: { entryId: true, entryType: true },
+        });
+        const ratedSet = new Set(userRatings.map(r => `${r.entryId}::${r.entryType}`));
+        finalResults.forEach(r => {
+          (r as any).isRated = ratedSet.has(`${r.id}::${r.type}`);
+        });
+      } else {
+        finalResults.forEach(r => {
+          (r as any).isRated = false;
+        });
+      }
+
       // Apply pagination requested by client (limit + offset)
       const paged = finalResults.slice(offset, offset + clientLimit);
       const total = finalResults.length;
@@ -352,6 +384,37 @@ export async function GET(request: NextRequest) {
           artistId: t.artists?.[0]?.id || "",
           type: "track",
         }));
+
+        // Mark which tracks are already rated by the current user
+        try {
+          const token = request.cookies.get("session")?.value;
+          if (token) {
+            const session = await getSession(token);
+            if (session) {
+              const userId = session.user.id;
+              const trackIds = tracks.map((t: any) => t.id).filter(Boolean);
+              if (trackIds.length > 0) {
+                const rated = await prisma.rating.findMany({
+                  where: { userId, entryId: { in: trackIds }, entryType: "track" },
+                  select: { entryId: true },
+                });
+                const ratedSet = new Set(rated.map(r => r.entryId));
+                tracks.forEach((t: any) => {
+                  (t as any).isRated = ratedSet.has(t.id);
+                });
+              } else {
+                tracks.forEach((t: any) => { (t as any).isRated = false; });
+              }
+            } else {
+              tracks.forEach((t: any) => { (t as any).isRated = false; });
+            }
+          } else {
+            tracks.forEach((t: any) => { (t as any).isRated = false; });
+          }
+        } catch (err) {
+          console.warn("Could not determine rated tracks for album lookup:", err);
+          tracks.forEach((t: any) => { (t as any).isRated = false; });
+        }
 
         return NextResponse.json({
           id: a.id,
