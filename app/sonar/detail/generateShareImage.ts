@@ -135,11 +135,13 @@ export async function generateShareImage({
   ctx.fillRect(0, H - 260, W, 260);
 
   // Main card
-  const cardX = 18;
-  const cardY = 36;
-  const cardW = W - 36;
+  const cardX = 28;
+  const cardY = 46;
+  const cardW = W - 56;
   const footerGap = 56;
   const cardH = Math.max(220, Math.round(H - cardY - footerGap));
+  const innerPad = 24;
+  const centerX = cardX + cardW / 2;
 
   ctx.fillStyle = isDarkMode ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.96)";
   rr(cardX, cardY, cardW, cardH, 28);
@@ -153,7 +155,7 @@ export async function generateShareImage({
 
   // Album art
   const artSize = added ? 222 : 230;
-  const artX = Math.round((W - artSize) / 2);
+  const artX = Math.round(cardX + (cardW - artSize) / 2);
   const artY = cardY + 28;
 
   if (image) {
@@ -193,18 +195,18 @@ export async function generateShareImage({
   ctx.fillStyle = "#111";
   ctx.textAlign = "center";
   ctx.font = `900 24px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  ctx.fillText(truncate(title, W - 72), W / 2, titleY);
+  ctx.fillText(truncate(title, cardW - 72), centerX, titleY);
 
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.font = `700 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  ctx.fillText(truncate(subtitle, W - 82), W / 2, subtitleY);
+  ctx.fillText(truncate(subtitle, cardW - 82), centerX, subtitleY);
 
   // Score
   if (added) {
     const scoreColor = scoreToColor(score);
-    const scoreBoxX = 52;
+    const scoreBoxX = cardX + innerPad + 6;
     const scoreBoxY = subtitleY + 30;
-    const scoreBoxW = W - 104;
+    const scoreBoxW = cardW - (innerPad + 6) * 2;
     const scoreBoxH = 72;
 
     const scoreBg = isDarkMode ? 'rgba(255,255,255,0.06)' : `${randomColor}22`;
@@ -220,16 +222,16 @@ export async function generateShareImage({
     ctx.textAlign = "center";
     ctx.font = `900 36px ui-monospace, SFMono-Regular, Menlo, monospace`;
     const displayScore = Number.isInteger(score) ? score.toFixed(0) : score.toFixed(1);
-    ctx.fillText(displayScore, W / 2, scoreBoxY + 42);
+    ctx.fillText(displayScore, centerX, scoreBoxY + 42);
 
     ctx.fillStyle = "#111";
     ctx.font = `800 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-    ctx.fillText("MI PUNTUACIÓN", W / 2, scoreBoxY + 59);
+    ctx.fillText("MI PUNTUACIÓN", centerX, scoreBoxY + 59);
 
     if (hasNote) {
-      const noteX = 38;
+      const noteX = cardX + innerPad + 4;
       const noteY = scoreBoxY + scoreBoxH + 22;
-      const noteW = W - 76;
+      const noteW = cardW - (innerPad + 4) * 2;
       const noteH = 100;
 
       ctx.fillStyle = "rgba(0,0,0,0.06)";
@@ -248,7 +250,7 @@ export async function generateShareImage({
   ctx.fillStyle = isDarkMode ? "rgba(255,255,255,0.62)" : "rgba(0,0,0,0.42)";
   ctx.textAlign = "center";
   ctx.font = `800 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  ctx.fillText("shared with sonar", W / 2, H - 24);
+  ctx.fillText("shared with sonar", centerX, H - 24);
 
   return canvas.toDataURL("image/png");
 }
