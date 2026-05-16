@@ -23,6 +23,14 @@ export async function cachedFetch(
   options?: RequestInit,
   ttl: number = 5 * 60 * 1000 // 5 minutes default
 ): Promise<Response> {
+  // Only cache Spotify API requests; all other requests should be fresh
+  const isSpotifyRequest = url.includes("/api/spotify");
+  
+  if (!isSpotifyRequest) {
+    // For non-Spotify requests, always fetch fresh without caching
+    return fetch(url, { ...options, cache: "no-store" });
+  }
+
   const cacheKey = url + JSON.stringify(options || {});
 
   // Check if response is still in cache and not expired

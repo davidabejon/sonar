@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const isApiRoute = (pathname: string) => pathname.startsWith("/api/");
+const isSpotifyApi = (pathname: string) => pathname.startsWith("/api/spotify");
 
 export function middleware(request: NextRequest) {
   const session = request.cookies.get("session")?.value;
@@ -18,7 +19,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  // For non-Spotify API routes, add no-cache headers to prevent disk caching
+  const response = NextResponse.next();
+  
+  if (isApiRoute(request.nextUrl.pathname) && !isSpotifyApi(request.nextUrl.pathname)) {
+    response.headers.set("Cache-Control", "no-store, must-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+  }
+
+  return response;
 }
 
 export const config = {
