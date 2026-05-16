@@ -37,6 +37,13 @@ const Icon = {
       <circle cx="17.5" cy="6.5" r="0.5" />
     </svg>
   ),
+  Download: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  ),
 };
 
 const RADIUS = 20;
@@ -335,7 +342,7 @@ export default function Detail() {
                   </svg>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32 }}>
-                    <Icon.Share />
+                    <Icon.Download />
                   </div>
                 )}
               </button>
@@ -353,7 +360,7 @@ export default function Detail() {
                   </div>
                 )}
               </button>
-              <div className="share-label">Instagram</div>
+              <div className="share-label">Compartir</div>
             </div>
           </div>
         </div>
