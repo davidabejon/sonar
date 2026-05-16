@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useThemeClient } from "../ThemeContext";
 import { getTheme } from "../theme";
@@ -22,6 +23,20 @@ const Icon = {
       <line x1="14" y1="11" x2="14" y2="17"></line>
     </svg>
   ),
+  Share: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+      <polyline points="16 6 12 2 8 6"></polyline>
+      <line x1="12" y1="2" x2="12" y2="15"></line>
+    </svg>
+  ),
+  Instagram: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8" />
+      <circle cx="17.5" cy="6.5" r="0.5" />
+    </svg>
+  ),
 };
 
 const RADIUS = 20;
@@ -32,14 +47,14 @@ function scoreToColor(score: number): string {
   if (t <= 0.5) {
     const s = t * 2;
     const r = Math.round(220 + (255 - 220) * (1 - s));
-    const g = Math.round(70  + (185 - 70)  * s);
-    const b = Math.round(50  + (30  - 50)  * s);
+    const g = Math.round(70 + (185 - 70) * s);
+    const b = Math.round(50 + (30 - 50) * s);
     return `rgb(${r},${g},${b})`;
   } else {
     const s = (t - 0.5) * 2;
-    const r = Math.round(255 - (255 - 80)  * s);
+    const r = Math.round(255 - (255 - 80) * s);
     const g = Math.round(185 + (210 - 185) * s);
-    const b = Math.round(30  + (80  - 30)  * s);
+    const b = Math.round(30 + (80 - 30) * s);
     return `rgb(${r},${g},${b})`;
   }
 }
@@ -91,7 +106,7 @@ function ScoreRing({ score, isDark }: { score: number; isDark: boolean }) {
           transition: "color 0.4s ease",
         }}
       >
-        {score.toFixed(1)}
+        {Number.isInteger(score) ? score.toFixed(0) : score.toFixed(1)}
       </span>
     </div>
   );
@@ -112,7 +127,7 @@ export default function Detail() {
   const searchParams = useSearchParams();
   const { isDarkMode } = useThemeClient();
   const COLORS = getTheme(isDarkMode);
-  
+
   const entityId = searchParams.get("id");
   const entityType = searchParams.get("type") || "track";
 
@@ -124,6 +139,8 @@ export default function Detail() {
   const [added, setAdded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const colors = ["#FF6B6B", "#A78BFA", "#34D399", "#FBBF24", "#F97316", "#60A5FA"];
@@ -134,10 +151,10 @@ export default function Detail() {
       if (!entityId) return;
       setLoading(true);
       setError(null);
-      
+
       try {
         let result = null;
-        
+
         if (entityType === "track") {
           result = await lookupTrack(entityId);
         } else if (entityType === "artist") {
@@ -145,7 +162,7 @@ export default function Detail() {
         } else if (entityType === "album") {
           result = await lookupAlbum(entityId);
         }
-        
+
         setData(result);
 
         // Cargar rating existente
@@ -281,7 +298,69 @@ export default function Detail() {
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* Share modal */
+    .share-overlay {
+      position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; z-index: 9999;
+      background: rgba(0,0,0,0.18);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+    .share-sheet {
+      width: 100%; max-width: 480px; background: #fff; padding: 14px 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.18); z-index: 10000;
+      color: #111; display: flex; flex-direction: column; gap: 8px;
+    }
+    .share-row { display: flex; gap: 14px; align-items: center; justify-content: center; padding: 6px 4px; }
+    .share-item { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 72px; }
+    .share-icon { width: 56px; height: 56px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: #F3F4F6; color: #111; }
+    .share-label { font-size: 12px; color: #6B7280; text-align: center; }
+    .share-close { position: absolute; top: 8px; right: 12px; background: transparent; border: none; font-size: 16px; cursor: pointer; }
   `;
+
+  function ShareModal({ onClose, onDownload, visible, sharing }: { onClose: () => void; onDownload: () => void; visible: boolean; sharing: boolean }) {
+    if (typeof document === "undefined" || !visible) return null;
+
+    return createPortal(
+      <div className="share-overlay" onClick={onClose}>
+        <div className="share-sheet" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+          <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
+            <button className="share-close" onClick={onClose} aria-label="Cerrar">✕</button>
+          </div>
+          <div className="share-row">
+            <div className="share-item">
+              <button className="share-icon" onClick={onDownload} disabled={sharing} style={{ border: 'none', cursor: 'pointer' }}>
+                {sharing ? (
+                  <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth={1.8} style={{ animation: 'spin 1s linear infinite' }}>
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32 }}>
+                    <Icon.Share />
+                  </div>
+                )}
+              </button>
+              <div className="share-label">Descargar</div>
+            </div>
+            <div className="share-item">
+              <button className="share-icon" onClick={handleShareToInstagram} disabled={sharing} style={{ border: 'none', cursor: 'pointer' }}>
+                {sharing ? (
+                  <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="currentColor" strokeWidth={1.8} style={{ animation: 'spin 1s linear infinite' }}>
+                    <circle cx="12" cy="12" r="10" />
+                  </svg>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32 }}>
+                    <Icon.Instagram />
+                  </div>
+                )}
+              </button>
+              <div className="share-label">Instagram</div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   const handleAdd = async () => {
     if (!entityId) return;
@@ -297,6 +376,94 @@ export default function Detail() {
       console.error("Error saving rating:", err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!data) return;
+    setShowShareModal(true);
+  };
+
+  const handleDownloadShare = async () => {
+    if (!data) return;
+
+    setSharing(true);
+    try {
+      const { generateShareImage } = await import("./generateShareImage");
+
+      const dataUrl = await generateShareImage({
+        title,
+        subtitle,
+        note,
+        added,
+        score,
+        image: data?.image ?? null,
+        isDarkMode,
+        randomColor,
+      });
+
+      const link = document.createElement("a");
+      link.download = `${(title || "sonar").replace(/[^a-z0-9]/gi, "-").toLowerCase()}-sonar-mobile.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Error generating share image:", err);
+    } finally {
+      setSharing(false);
+      setShowShareModal(false);
+    }
+  };
+
+  const handleShareToInstagram = async () => {
+    if (!data) return;
+
+    setSharing(true);
+    try {
+      const { generateShareImage } = await import("./generateShareImage");
+
+      const dataUrl = await generateShareImage({
+        title,
+        subtitle,
+        note,
+        added,
+        score,
+        image: data?.image ?? null,
+        isDarkMode,
+        randomColor,
+      });
+
+      // convert to blob
+      const blob = await (await fetch(dataUrl)).blob();
+      const name = `${(title || "sonar").replace(/[^a-z0-9]/gi, "-").toLowerCase()}-sonar.png`;
+      const file = new File([blob], name, { type: "image/png" });
+
+      const nav = navigator as any;
+      if (nav && nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
+        await nav.share({ files: [file], title, text: subtitle });
+      } else {
+        // fallback: download then open Instagram web
+        const link = document.createElement("a");
+        link.download = name;
+        link.href = dataUrl;
+        link.click();
+        window.open("https://www.instagram.com/", "_blank");
+      }
+    } catch (err) {
+      console.error("Error sharing to Instagram:", err);
+      // fallback: just download
+      try {
+        const { generateShareImage } = await import("./generateShareImage");
+        const dataUrl = await generateShareImage({ title, subtitle, note, added, score, image: data?.image ?? null, isDarkMode, randomColor });
+        const link = document.createElement("a");
+        link.download = `${(title || "sonar").replace(/[^a-z0-9]/gi, "-").toLowerCase()}-sonar.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (e) {
+        console.error(e);
+      }
+    } finally {
+      setSharing(false);
+      setShowShareModal(false);
     }
   };
 
@@ -350,7 +517,7 @@ export default function Detail() {
 
   // Renderizar según tipo de entidad
   let title = "", subtitle = "", description = "";
-  
+
   if (entityType === "track") {
     title = data.name;
     subtitle = data.artist;
@@ -383,7 +550,7 @@ export default function Detail() {
             {entityType === "track" ? (
               <div>
                 <a
-                  onClick={() => data?.artistId && router.push(`/sonar/detail?id=${data.artistId}&type=artist`) }
+                  onClick={() => data?.artistId && router.push(`/sonar/detail?id=${data.artistId}&type=artist`)}
                   style={{ fontSize: 16, color: COLORS.accent, fontWeight: 300, cursor: data?.artistId ? 'pointer' : 'default', textDecoration: data?.artistId ? 'underline' : 'none' }}
                 >
                   {subtitle}
@@ -433,7 +600,7 @@ export default function Detail() {
                       <span style={{ fontWeight: 500, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "60%" }}>
                         {item.label === "Álbum" && item.id ? (
                           <a
-                            onClick={() => router.push(`/sonar/detail?id=${item.id}&type=album`) }
+                            onClick={() => router.push(`/sonar/detail?id=${item.id}&type=album`)}
                             style={{ color: COLORS.accent, textDecoration: 'underline', cursor: 'pointer' }}
                           >
                             {item.value}
@@ -499,7 +666,7 @@ export default function Detail() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 15, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
                         </div>
-                        <div style={{ color: COLORS.textTertiary, flexShrink: 0, marginLeft: 8 }}>{t.duration_ms ? `${Math.floor(t.duration_ms/60000)}:${String(Math.floor((t.duration_ms%60000)/1000)).padStart(2, "0")}` : ""}</div>
+                        <div style={{ color: COLORS.textTertiary, flexShrink: 0, marginLeft: 8 }}>{t.duration_ms ? `${Math.floor(t.duration_ms / 60000)}:${String(Math.floor((t.duration_ms % 60000) / 1000)).padStart(2, "0")}` : ""}</div>
                       </div>
                     ))}
                   </div>
@@ -596,7 +763,7 @@ export default function Detail() {
                           <div style={{ fontSize: 15, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</div>
                           <div style={{ fontSize: 12, color: COLORS.textTertiary }}>{t.artists || data.artist}</div>
                         </div>
-                        <div style={{ color: COLORS.textTertiary, flexShrink: 0, marginLeft: 8 }}>{t.duration_ms ? `${Math.floor(t.duration_ms/60000)}:${String(Math.floor((t.duration_ms%60000)/1000)).padStart(2, "0")}` : ""}</div>
+                        <div style={{ color: COLORS.textTertiary, flexShrink: 0, marginLeft: 8 }}>{t.duration_ms ? `${Math.floor(t.duration_ms / 60000)}:${String(Math.floor((t.duration_ms % 60000) / 1000)).padStart(2, "0")}` : ""}</div>
                       </div>
                     ))}
                   </div>
@@ -651,8 +818,8 @@ export default function Detail() {
               <button
                 className={`btn-primary ${added ? "success" : ""}`}
                 onClick={handleAdd}
-                disabled={saving || deleting}
-                style={{ opacity: saving || deleting ? 0.7 : 1, cursor: saving || deleting ? "not-allowed" : "pointer" }}
+                disabled={saving || deleting || sharing}
+                style={{ opacity: saving || deleting || sharing ? 0.7 : 1, cursor: saving || deleting || sharing ? "not-allowed" : "pointer" }}
               >
                 {added ? "Actualizar" : "Guardar"}
               </button>
@@ -660,12 +827,32 @@ export default function Detail() {
                 <button
                   className="btn-secondary danger"
                   onClick={handleDelete}
-                  disabled={deleting || saving}
-                  style={{ opacity: deleting || saving ? 0.7 : 1, cursor: deleting || saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                  aria-label="Eliminar"
+                  disabled={deleting || saving || sharing}
+                  style={{ opacity: deleting || saving || sharing ? 0.7 : 1, cursor: deleting || saving || sharing ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
-                  Eliminar
+                  <span style={{ width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon.Trash />
+                  </span>
                 </button>
               )}
+              <button
+                className="btn-secondary"
+                onClick={handleShare}
+                disabled={sharing || saving || deleting}
+                title="Compartir como imagen"
+                style={{ opacity: sharing || saving || deleting ? 0.7 : 1, cursor: sharing || saving || deleting ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: 42 }}
+              >
+                <span style={{ width: 18, height: 18, display: "flex", alignItems: "center" }}>
+                  {sharing ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} style={{ animation: "spin 1s linear infinite" }}>
+                      <circle cx="12" cy="12" r="10" />
+                    </svg>
+                  ) : (
+                    <Icon.Share />
+                  )}
+                </span>
+              </button>
             </div>
 
             {error && (
@@ -675,6 +862,9 @@ export default function Detail() {
             )}
           </div>
         </div>
+        {showShareModal && (
+          <ShareModal visible={showShareModal} onClose={() => setShowShareModal(false)} onDownload={handleDownloadShare} sharing={sharing} />
+        )}
       </div>
     </>
   );
