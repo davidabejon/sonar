@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { GlobalStyles } from "./GlobalStyles";
+import PWARegister from "./PWARegister";
 
 export const metadata: Metadata = {
   title: "sonar - tu música, tu memoria",
@@ -17,11 +18,16 @@ export default function RootLayout({
     <html lang="es">
       <head>
         <link rel="icon" href="/sonar.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/sonar.png" />
+        <meta name="theme-color" content="#000000" />
         <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <GlobalStyles />
       </head>
       <body style={{ margin: 0, padding: 0, width: "100%", minHeight: "100svh" }}>
         <Providers>{children}</Providers>
+        <PWARegister />
       </body>
     </html>
   );
