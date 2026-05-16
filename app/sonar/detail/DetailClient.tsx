@@ -181,9 +181,20 @@ export default function Detail() {
             setScoreInput(normalized.toFixed(1));
             setNote(existingRating.notes ?? "");
             setAdded(true);
+          } else {
+            // No hay rating existente, reset a defaults
+            setScore(5);
+            setScoreInput("5");
+            setNote("");
+            setAdded(false);
           }
         } catch (err) {
           console.error("Error loading existing rating:", err);
+          // En caso de error, también reset a defaults
+          setScore(5);
+          setScoreInput("5");
+          setNote("");
+          setAdded(false);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
