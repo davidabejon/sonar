@@ -7,6 +7,23 @@ import { getTheme } from "../theme";
 import { lookupTrack, lookupArtist, lookupAlbum } from "../lib/spotify";
 import { saveRating, getRating, deleteRating } from "../lib/ratings";
 
+const Icon = {
+  Plus: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+  Trash: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      <line x1="10" y1="11" x2="10" y2="17"></line>
+      <line x1="14" y1="11" x2="14" y2="17"></line>
+    </svg>
+  ),
+};
+
 const RADIUS = 20;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -90,15 +107,6 @@ function AlbumArt({ color, size = 52, src, alt }: { color: string; size?: number
   );
 }
 
-const Icon = {
-  Plus: () => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  ),
-};
-
 export default function Detail() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -115,6 +123,7 @@ export default function Detail() {
   const [note, setNote] = useState("");
   const [added, setAdded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const colors = ["#FF6B6B", "#A78BFA", "#34D399", "#FBBF24", "#F97316", "#60A5FA"];
@@ -223,6 +232,20 @@ export default function Detail() {
     .btn-primary:active { transform: scale(0.98); }
     .btn-primary.success { background: linear-gradient(135deg, #34D399, #059669) !important; box-shadow: 0 8px 32px rgba(52,211,153,0.3) !important; }
 
+    .btn-secondary {
+      background: transparent;
+      border: 1.25px solid ${COLORS.accent};
+      border-radius: 12px;
+      color: ${COLORS.accent}; font-size: 14px; font-weight: 600;
+      padding: 8px 12px; width: auto; min-width: 48px;
+      height: 42px; display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; cursor: pointer; transition: all 0.15s;
+    }
+    .btn-secondary:hover { background: rgba(167,139,250,0.06); transform: translateY(-1px); }
+    .btn-secondary:active { transform: scale(0.98); }
+    .btn-secondary.danger { border-color: #EF4444; color: #EF4444; }
+    .btn-secondary.danger:hover { background: rgba(239,68,68,0.06); }
+
     .input-field {
       background: ${COLORS.surface};
       border: 0.5px solid ${COLORS.glassBorder};
@@ -274,6 +297,23 @@ export default function Detail() {
       console.error("Error saving rating:", err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!entityId) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await deleteRating(entityId, entityType as "track" | "album" | "artist");
+      setAdded(false);
+    } catch (err: any) {
+      setError(err.message || "Error al eliminar la valoración");
+      console.error("Error deleting rating:", err);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -607,14 +647,26 @@ export default function Detail() {
               />
             </div>
 
-            <button
-              className={`btn-primary ${added ? "success" : ""}`}
-              onClick={handleAdd}
-              disabled={saving}
-              style={{ opacity: saving ? 0.7 : 1, cursor: saving ? "not-allowed" : "pointer" }}
-            >
-              guardar
-            </button>
+            <div className="flex gap-2 items-center">
+              <button
+                className={`btn-primary ${added ? "success" : ""}`}
+                onClick={handleAdd}
+                disabled={saving || deleting}
+                style={{ opacity: saving || deleting ? 0.7 : 1, cursor: saving || deleting ? "not-allowed" : "pointer" }}
+              >
+                {added ? "Actualizar" : "Guardar"}
+              </button>
+              {added && (
+                <button
+                  className="btn-secondary danger"
+                  onClick={handleDelete}
+                  disabled={deleting || saving}
+                  style={{ opacity: deleting || saving ? 0.7 : 1, cursor: deleting || saving ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                >
+                  Eliminar
+                </button>
+              )}
+            </div>
 
             {error && (
               <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "rgba(239, 68, 68, 0.06)", border: "0.5px solid rgba(239, 68, 68, 0.12)", color: "#EF4444", fontSize: 13 }}>
