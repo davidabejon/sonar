@@ -138,10 +138,14 @@ export async function generateShareImage({
   const cardX = 28;
   const cardY = 46;
   const cardW = W - 56;
-  const footerGap = 56;
-  const cardH = Math.max(220, Math.round(H - cardY - footerGap));
+  // make the white card end earlier (leave more space at bottom)
+  const footerGap = 48;
+  const cardH = Math.max(180, Math.round(H - cardY - footerGap));
   const innerPad = 24;
   const centerX = cardX + cardW / 2;
+
+  // footer Y defaults to bottom inside the card; may be moved up if there are notes
+  let footerY = cardY + cardH - 18;
 
   ctx.fillStyle = isDarkMode ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.96)";
   rr(cardX, cardY, cardW, cardH, 28);
@@ -243,14 +247,17 @@ export async function generateShareImage({
       ctx.font = `italic 400 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
 
       wrapText(`“${note.trim()}”`, noteX + 18, noteY + 34, noteW - 36, 18, 3);
+
+      // move footer just below notes container
+      footerY = noteY + noteH + 32;
     }
   }
 
   // Footer
-  ctx.fillStyle = isDarkMode ? "rgba(255,255,255,0.62)" : "rgba(0,0,0,0.42)";
+  ctx.fillStyle = isDarkMode ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.42)";
   ctx.textAlign = "center";
   ctx.font = `800 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-  ctx.fillText("shared with sonar", centerX, H - 24);
+  ctx.fillText("shared with sonar", centerX, footerY);
 
   return canvas.toDataURL("image/png");
 }
