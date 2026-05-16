@@ -778,8 +778,8 @@ export default function Detail() {
                       <div key={t.id || idx} className="list-row" onClick={() => t.id && router.push(`/sonar/detail?id=${t.id}&type=track`)}>
                         <div style={{ width: 34, textAlign: "right", color: COLORS.textTertiary, fontSize: 13 }}>{t.track_number || idx + 1}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 15, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
-                            {t.name}
+                          <div style={{ fontSize: 15, fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
                             {t.isRated && (
                               <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16, color: COLORS.accent, flexShrink: 0, pointerEvents: 'none', userSelect: 'none' }}>
                                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
