@@ -114,7 +114,7 @@ export default function Settings() {
       rows: [
         { label: "Correo electrónico", value: user?.email ?? "…", icon: <Icon.Globe /> },
         { label: "Contraseña", value: "••••••••", icon: <Icon.Lock /> },
-        ...(isAdmin ? [{ label: "Panel Admin", value: "→", icon: <Icon.Shield />, action: () => router.push('/admin') }] : []),
+        ...(isAdmin ? [{ label: "Panel Admin", value: "→", icon: <Icon.Shield />, action: () => router.push('/sonar/admin') }] : []),
       ],
     },
     {

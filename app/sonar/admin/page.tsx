@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useThemeClient } from "../sonar/ThemeContext";
-import { getTheme } from "../sonar/theme";
+import { useThemeClient } from "../ThemeContext";
+import { getTheme } from "../theme";
 
 type User = { id: string; email: string; username: string; createdAt: string };
 type Rating = { id: string; userId: string; entryId: string; entryType: string; score: number; notes?: string; createdAt: string; title?: string; image?: string; user?: { username: string; email?: string } };
@@ -103,7 +103,7 @@ export default function AdminPanel() {
       const items: Rating[] = data.items || [];
       // Enrich ratings with Spotify metadata in parallel
       try {
-        const spotify = await import("../sonar/lib/spotify");
+        const spotify = await import("../lib/spotify");
         const lookups = items.map(async (r) => {
           try {
             if (r.entryType === "track") {
@@ -274,26 +274,6 @@ export default function AdminPanel() {
     <>
       <style>{css}</style>
       <div className="content-area" style={{ paddingTop: 12, maxWidth: 480, margin: "0 auto", width: "100%" }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <button
-            onClick={() => router.push("/sonar/settings")}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: COLORS.accent,
-              display: "flex",
-              alignItems: "center",
-              width: 24,
-              height: 24,
-              padding: 0,
-            }}
-          >
-            <Icon.ChevronLeft />
-          </button>
-          <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Panel de Administración</h1>
-        </div>
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: `0.5px solid ${COLORS.glassBorder}`, marginBottom: 24 }}>
@@ -311,30 +291,7 @@ export default function AdminPanel() {
           </button>
         </div>
 
-        {/* Search */}
-        <div style={{ marginBottom: 18, display: 'flex', gap: 8 }}>
-          <input
-            className="input-small"
-            placeholder={tab === "users" ? "Buscar usuario por nombre o email" : "Buscar ratings por usuario, entryId o tipo"}
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); if (tab === 'users') setUserPage(1); else setRatingPage(1); }}
-            style={{ flex: 1 }}
-          />
-          <button
-            className="btn-small"
-            onClick={() => {
-              const q = searchQuery.trim();
-              setDebouncedQuery(q);
-              if (tab === 'users') { setUserPage(1); loadUsers(); } else { setRatingPage(1); loadRatings(); }
-            }}
-            aria-label="Buscar"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-              <circle cx="11" cy="11" r="7" />
-              <path d="M21 21l-4.35-4.35" />
-            </svg>
-          </button>
-        </div>
+        {/* (Search input removed — title & back button are in top bar) */}
 
         {/* Users Tab */}
         {tab === "users" && (

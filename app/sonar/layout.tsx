@@ -89,6 +89,7 @@ export default function SonarLayout({ children }: { children: ReactNode }) {
   ];
 
   const isDetailPage = pathname.includes("/sonar/detail");
+  const isAdminPage = pathname.startsWith("/sonar/admin");
   const currentNav = navItems.find(item => pathname.startsWith(item.path))?.path;
 
   const handleSearchFocus = () => {
@@ -117,6 +118,16 @@ export default function SonarLayout({ children }: { children: ReactNode }) {
             <button onClick={handleBackClick} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, display: "flex", alignItems: "center", gap: 4, fontSize: 15, padding: 0 }}>
               <span style={{ width: 20, height: 20 }}><Icon.ChevronLeft /></span> Volver
             </button>
+            <button className="avatar-btn" onClick={handleProfileClick}>{initial}</button>
+          </div>
+        ) : isAdminPage ? (
+          <div className="top-bar" style={{ justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button onClick={() => router.push("/sonar/settings")} style={{ background: "none", border: "none", cursor: "pointer", color: COLORS.accent, display: "flex", alignItems: "center", gap: 4, fontSize: 15, padding: 0, marginBottom: "4px" }}>
+                <span style={{ width: 20, height: 20 }}><Icon.ChevronLeft /></span>
+              </button>
+              <div style={{ fontSize: 18, fontWeight: 600 }}>Panel de Administración</div>
+            </div>
             <button className="avatar-btn" onClick={handleProfileClick}>{initial}</button>
           </div>
         ) : (
