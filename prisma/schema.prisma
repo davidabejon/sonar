@@ -14,10 +14,12 @@ model Rating {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entryId   String   // Spotify ID
-  entryType String   // "track", "album", or "artist"
-  title     String?  // Title/name of the entry for searching
-  score     Int      // 0-100 integer scale
+  entryId    String   // Spotify ID
+  entryType  String   // "track", "album", or "artist"
+  title      String?  // Title/name of the entry for searching
+  artistName String?  // Artist name (for track and album)
+  albumName  String?  // Album name (for track only)
+  score      Int      // 0-100 integer scale
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
