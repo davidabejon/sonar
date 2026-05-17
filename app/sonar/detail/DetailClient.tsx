@@ -387,15 +387,7 @@ export default function Detail() {
     setError(null);
 
     try {
-      await saveRating(
-        entityId,
-        entityType as "track" | "album" | "artist",
-        Math.round(score * 10),
-        note,
-        data?.name,
-        entityType !== "artist" ? data?.artist : undefined,
-        entityType === "track" ? data?.album : undefined
-      );
+      await saveRating(entityId, entityType as "track" | "album" | "artist", Math.round(score * 10), note, data?.name);
       setAdded(true);
     } catch (err: any) {
       setError(err.message || "Error al guardar la valoración");

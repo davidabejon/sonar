@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const userId = session.userId;
     const body = await request.json();
-    const { entryId, entryType, notes, title, artistName, albumName } = body;
+    const { entryId, entryType, notes, title } = body;
     const score = typeof body.score === "string" ? Number(body.score) : body.score;
 
     // Validate input
@@ -57,8 +57,6 @@ export async function POST(request: NextRequest) {
         score: finalScore,
         notes: notes || null,
         title: title || undefined,
-        artistName: artistName || undefined,
-        albumName: albumName || undefined,
       },
       create: {
         userId,
@@ -67,8 +65,6 @@ export async function POST(request: NextRequest) {
         score: finalScore,
         notes: notes || null,
         title: title || null,
-        artistName: artistName || null,
-        albumName: albumName || null,
       },
     });
 
