@@ -9,6 +9,12 @@ const API_BASE = "https://api.spotify.com/v1";
 let cachedToken: string | null = null;
 let tokenExpiry: number = 0;
 
+// Server-side Spotify response cache (shared across all users/requests)
+interface SpotifyCacheEntry { data: any; expiresAt: number; }
+const spotifyResponseCache = new Map<string, SpotifyCacheEntry>();
+const CACHE_TTL_LOOKUP = 60 * 60 * 1000;   // 1 hour — entity data rarely changes
+const CACHE_TTL_SEARCH = 5 * 60 * 1000;    // 5 minutes — search results can change
+
 async function getAccessToken(): Promise<string> {
   if (cachedToken && Date.now() < tokenExpiry) {
     return cachedToken;
@@ -60,6 +66,22 @@ async function spotifyFetch(path: string, params: Record<string, string> = {}) {
   return response.json();
 }
 
+/** Wraps spotifyFetch with server-side in-memory caching. */
+async function cachedSpotifyFetch(
+  path: string,
+  params: Record<string, string> = {},
+  ttl: number = CACHE_TTL_LOOKUP,
+) {
+  const key = path + (Object.keys(params).length ? "?" + new URLSearchParams(params).toString() : "");
+  const cached = spotifyResponseCache.get(key);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data;
+  }
+  const data = await spotifyFetch(path, params);
+  spotifyResponseCache.set(key, { data, expiresAt: Date.now() + ttl });
+  return data;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
@@ -76,11 +98,11 @@ export async function GET(request: NextRequest) {
       const clientLimit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10);
       const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10) || 0);
       const fetchLimit = 50; // fetch a larger pool so we can balance types reliably (Spotify max ~50)
-      const data = await spotifyFetch("/search", {
+      const data = await cachedSpotifyFetch("/search", {
         q,
         type: "track,artist,album",
         limit: String(fetchLimit),
-      });
+      }, CACHE_TTL_SEARCH);
 
       // Normalize results
       interface SearchResult {
@@ -280,29 +302,32 @@ export async function GET(request: NextRequest) {
     if (action === "lookup") {
       const type = searchParams.get("type");
       const id = searchParams.get("id");
+      // lite=1 → only fetch basic fields (1 Spotify API call). Used by list pages (home, ratings).
+      // lite=0 (default) → full detail page data (multiple API calls).
+      const lite = searchParams.get("lite") === "1";
 
       if (!type || !id) {
         return NextResponse.json({ error: "Missing type or id" }, { status: 400 });
       }
 
       if (type === "track") {
-        const t = await spotifyFetch(`/tracks/${id}`);
+        const t = await cachedSpotifyFetch(`/tracks/${id}`);
 
-        // Gather genres from the track's artists (tracks don't include genres)
+        // Genres require an extra batch artist call — skip in lite mode
         let genres: string[] = [];
-        try {
-          const artistIds = (t.artists || []).map((a: any) => a.id).filter(Boolean);
-          if (artistIds.length > 0) {
-            // Use the batch artists endpoint to get genres
-            const artistsResp = await spotifyFetch(`/artists`, { ids: artistIds.slice(0, 50).join(',') });
-            const artists = artistsResp.artists || [];
-            const genreSet = new Set<string>();
-            artists.forEach((ar: any) => (ar.genres || []).forEach((g: string) => genreSet.add(g)));
-            genres = Array.from(genreSet).slice(0, 5);
+        if (!lite) {
+          try {
+            const artistIds = (t.artists || []).map((a: any) => a.id).filter(Boolean);
+            if (artistIds.length > 0) {
+              const artistsResp = await cachedSpotifyFetch(`/artists`, { ids: artistIds.slice(0, 50).join(',') });
+              const artists = artistsResp.artists || [];
+              const genreSet = new Set<string>();
+              artists.forEach((ar: any) => (ar.genres || []).forEach((g: string) => genreSet.add(g)));
+              genres = Array.from(genreSet).slice(0, 5);
+            }
+          } catch (err) {
+            console.warn("Could not fetch artist genres for track lookup:", err);
           }
-        } catch (err) {
-          console.warn("Could not fetch artist genres for track lookup:", err);
-          genres = [];
         }
 
         return NextResponse.json({
@@ -327,50 +352,53 @@ export async function GET(request: NextRequest) {
       }
 
       if (type === "artist") {
-        const a = await spotifyFetch(`/artists/${id}`);
-        
-        let albums = [];
-        let topTracks = [];
-        let relatedArtists = [];
-        
-        try {
-          const albumsResp = await spotifyFetch(`/artists/${id}/albums`, { limit: "20" });
-          albums = (albumsResp.items || []).map((alb: any) => ({
-            id: alb.id,
-            name: alb.name,
-            image: alb.images?.[0]?.url || null,
-            release_date: alb.release_date || "",
-            album_type: alb.album_type,
-            type: "album",
-          }));
-        } catch (err) {
-          console.error("Error fetching artist albums:", err);
-        }
-        
-        try {
-          const topTracksResp = await spotifyFetch(`/artists/${id}/top-tracks`, { market: "ES" });
-          topTracks = (topTracksResp.tracks || []).slice(0, 10).map((t: any) => ({
-            id: t.id,
-            name: t.name,
-            duration_ms: t.duration_ms,
-            preview_url: t.preview_url,
-            type: "track",
-          }));
-        } catch (err) {
-          console.error("Error fetching artist top tracks:", err);
-        }
-        
-        try {
-          const relatedResp = await spotifyFetch(`/artists/${id}/related-artists`);
-          relatedArtists = (relatedResp.artists || []).slice(0, 6).map((ar: any) => ({
-            id: ar.id,
-            name: ar.name,
-            image: ar.images?.[0]?.url || null,
-            genres: ar.genres || [],
-            type: "artist",
-          }));
-        } catch (err) {
-          console.error("Error fetching related artists:", err);
+        const a = await cachedSpotifyFetch(`/artists/${id}`);
+
+        // Albums, top tracks and related artists are only needed on the detail page
+        let albums: any[] = [];
+        let topTracks: any[] = [];
+        let relatedArtists: any[] = [];
+
+        if (!lite) {
+          try {
+            const albumsResp = await cachedSpotifyFetch(`/artists/${id}/albums`, { limit: "20" });
+            albums = (albumsResp.items || []).map((alb: any) => ({
+              id: alb.id,
+              name: alb.name,
+              image: alb.images?.[0]?.url || null,
+              release_date: alb.release_date || "",
+              album_type: alb.album_type,
+              type: "album",
+            }));
+          } catch (err) {
+            console.error("Error fetching artist albums:", err);
+          }
+
+          try {
+            const topTracksResp = await cachedSpotifyFetch(`/artists/${id}/top-tracks`, { market: "ES" });
+            topTracks = (topTracksResp.tracks || []).slice(0, 10).map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              duration_ms: t.duration_ms,
+              preview_url: t.preview_url,
+              type: "track",
+            }));
+          } catch (err) {
+            console.error("Error fetching artist top tracks:", err);
+          }
+
+          try {
+            const relatedResp = await cachedSpotifyFetch(`/artists/${id}/related-artists`);
+            relatedArtists = (relatedResp.artists || []).slice(0, 6).map((ar: any) => ({
+              id: ar.id,
+              name: ar.name,
+              image: ar.images?.[0]?.url || null,
+              genres: ar.genres || [],
+              type: "artist",
+            }));
+          } catch (err) {
+            console.error("Error fetching related artists:", err);
+          }
         }
 
         return NextResponse.json({
@@ -388,51 +416,52 @@ export async function GET(request: NextRequest) {
       }
 
       if (type === "album") {
-        const a = await spotifyFetch(`/albums/${id}`);
+        const a = await cachedSpotifyFetch(`/albums/${id}`);
 
-        // Separate call to ensure we fetch the album's tracks list
-        const tracksResp = await spotifyFetch(`/albums/${id}/tracks`, { limit: "50" });
-        const tracks = (tracksResp.items || []).map((t: any) => ({
-          id: t.id,
-          name: t.name,
-          duration_ms: t.duration_ms,
-          track_number: t.track_number,
-          disc_number: t.disc_number,
-          preview_url: t.preview_url,
-          artists: t.artists?.map((ar: any) => ar.name).join(", ") || "",
-          artistId: t.artists?.[0]?.id || "",
-          type: "track",
-        }));
+        // Track list is only needed on the detail page
+        let tracks: any[] = [];
+        if (!lite) {
+          const tracksResp = await cachedSpotifyFetch(`/albums/${id}/tracks`, { limit: "50" });
+          tracks = (tracksResp.items || []).map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            duration_ms: t.duration_ms,
+            track_number: t.track_number,
+            disc_number: t.disc_number,
+            preview_url: t.preview_url,
+            artists: t.artists?.map((ar: any) => ar.name).join(", ") || "",
+            artistId: t.artists?.[0]?.id || "",
+            type: "track",
+          }));
 
-        // Mark which tracks are already rated by the current user
-        try {
-          const token = request.cookies.get("session")?.value;
-          if (token) {
-            const session = await getSession(token);
-            if (session) {
-              const userId = session.user.id;
-              const trackIds = tracks.map((t: any) => t.id).filter(Boolean);
-              if (trackIds.length > 0) {
-                const rated = await prisma.rating.findMany({
-                  where: { userId, entryId: { in: trackIds }, entryType: "track" },
-                  select: { entryId: true },
-                });
-                const ratedSet = new Set(rated.map(r => r.entryId));
-                tracks.forEach((t: any) => {
-                  (t as any).isRated = ratedSet.has(t.id);
-                });
+          // Mark which tracks are already rated by the current user
+          try {
+            const token = request.cookies.get("session")?.value;
+            if (token) {
+              const session = await getSession(token);
+              if (session) {
+                const userId = session.user.id;
+                const trackIds = tracks.map((t: any) => t.id).filter(Boolean);
+                if (trackIds.length > 0) {
+                  const rated = await prisma.rating.findMany({
+                    where: { userId, entryId: { in: trackIds }, entryType: "track" },
+                    select: { entryId: true },
+                  });
+                  const ratedSet = new Set(rated.map(r => r.entryId));
+                  tracks.forEach((t: any) => { t.isRated = ratedSet.has(t.id); });
+                } else {
+                  tracks.forEach((t: any) => { t.isRated = false; });
+                }
               } else {
-                tracks.forEach((t: any) => { (t as any).isRated = false; });
+                tracks.forEach((t: any) => { t.isRated = false; });
               }
             } else {
-              tracks.forEach((t: any) => { (t as any).isRated = false; });
+              tracks.forEach((t: any) => { t.isRated = false; });
             }
-          } else {
-            tracks.forEach((t: any) => { (t as any).isRated = false; });
+          } catch (err) {
+            console.warn("Could not determine rated tracks for album lookup:", err);
+            tracks.forEach((t: any) => { t.isRated = false; });
           }
-        } catch (err) {
-          console.warn("Could not determine rated tracks for album lookup:", err);
-          tracks.forEach((t: any) => { (t as any).isRated = false; });
         }
 
         return NextResponse.json({

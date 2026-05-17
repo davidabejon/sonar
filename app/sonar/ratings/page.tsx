@@ -15,7 +15,7 @@ const PAGE_SIZE = 10;
 
 async function lookupEntry(entryId: string, entryType: string): Promise<{ name: string; subtitle: string; image?: string }> {
   try {
-    const res = await fetch(`/api/spotify?action=lookup&type=${entryType}&id=${entryId}`);
+    const res = await fetch(`/api/spotify?action=lookup&lite=1&type=${entryType}&id=${entryId}`);
     if (!res.ok) throw new Error();
     const d = await res.json();
     const image = d.image ?? (d.album?.images?.[0]?.url) ?? null;

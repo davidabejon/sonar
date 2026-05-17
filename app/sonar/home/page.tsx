@@ -67,7 +67,7 @@ export default function Home() {
   // Memoized lookup function
   const lookupEntry = useCallback(async (entryId: string, entryType: string) => {
     try {
-      const url = '/api/spotify?action=lookup&type=' + encodeURIComponent(String(entryType)) + '&id=' + encodeURIComponent(String(entryId));
+      const url = '/api/spotify?action=lookup&lite=1&type=' + encodeURIComponent(String(entryType)) + '&id=' + encodeURIComponent(String(entryId));
       const res = await fetch(url);
       if (!res.ok) throw new Error("lookup failed");
       const d = await res.json();
