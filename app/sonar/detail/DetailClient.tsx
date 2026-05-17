@@ -149,6 +149,7 @@ export default function Detail() {
   const [sharing, setSharing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const colors = ["#FF6B6B", "#A78BFA", "#34D399", "#FBBF24", "#F97316", "#60A5FA"];
   const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -335,6 +336,25 @@ export default function Detail() {
     .share-close { position: absolute; top: 8px; right: 12px; background: transparent; border: none; font-size: 16px; cursor: pointer; }
   `;
 
+  // toast styles appended
+  const toastCss = `
+    .toast {
+      position: fixed;
+      right: 18px;
+      top: 90px;
+      background: rgba(16,185,129,0.95);
+      color: white;
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(2,6,23,0.18);
+      font-weight: 600;
+      z-index: 10001;
+    }
+    .btn-spinner {
+      width: 16px; height: 16px; margin-right: 8px; vertical-align: middle; display: inline-block;
+    }
+  `;
+
   function ShareModal({ onClose, onDownload, visible, sharing }: { onClose: () => void; onDownload: () => void; visible: boolean; sharing: boolean }) {
     if (typeof document === "undefined" || !visible) return null;
 
@@ -397,6 +417,9 @@ export default function Detail() {
         entityType === "track" ? data?.album : undefined
       );
       setAdded(true);
+      // Show success toast
+      setToast("Actualizado correctamente");
+      window.setTimeout(() => setToast(null), 3000);
     } catch (err: any) {
       setError(err.message || "Error al guardar la valoración");
       console.error("Error saving rating:", err);
@@ -561,6 +584,8 @@ export default function Detail() {
   return (
     <>
       <style>{css}</style>
+      <style>{toastCss}</style>
+      {toast && <div className="toast" role="status">{toast}</div>}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Hero */}
         <div style={{
