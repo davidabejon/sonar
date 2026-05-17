@@ -287,6 +287,24 @@ export async function GET(request: NextRequest) {
 
       if (type === "track") {
         const t = await spotifyFetch(`/tracks/${id}`);
+
+        // Gather genres from the track's artists (tracks don't include genres)
+        let genres: string[] = [];
+        try {
+          const artistIds = (t.artists || []).map((a: any) => a.id).filter(Boolean);
+          if (artistIds.length > 0) {
+            // Use the batch artists endpoint to get genres
+            const artistsResp = await spotifyFetch(`/artists`, { ids: artistIds.slice(0, 50).join(',') });
+            const artists = artistsResp.artists || [];
+            const genreSet = new Set<string>();
+            artists.forEach((ar: any) => (ar.genres || []).forEach((g: string) => genreSet.add(g)));
+            genres = Array.from(genreSet).slice(0, 5);
+          }
+        } catch (err) {
+          console.warn("Could not fetch artist genres for track lookup:", err);
+          genres = [];
+        }
+
         return NextResponse.json({
           id: t.id,
           name: t.name,
@@ -303,6 +321,7 @@ export async function GET(request: NextRequest) {
           disc_number: t.disc_number,
           track_number: t.track_number,
           isrc: t.external_ids?.isrc || "",
+          genres,
           type: "track",
         });
       }
