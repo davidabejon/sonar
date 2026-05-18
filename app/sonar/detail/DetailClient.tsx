@@ -581,6 +581,12 @@ export default function Detail() {
     description = `${data.album_type || "Album"} · ${data.release_date?.substring(0, 4) || ""}`;
   }
 
+  // Rendering helpers for subtitle/description
+  const isMusic = entityType === "track" || entityType === "album";
+  const subtitleLinkStyle = { fontSize: 16, color: COLORS.accent, fontWeight: 300, cursor: data?.artistId ? 'pointer' : 'default', textDecoration: data?.artistId ? 'underline' : 'none' };
+  const descriptionLinkStyle = { fontSize: 13, color: COLORS.accent, fontWeight: 300, cursor: data?.albumId ? 'pointer' : 'default', textDecoration: data?.albumId ? 'underline' : 'none' };
+  const descriptionPlainStyle = { fontSize: 13, color: COLORS.textTertiary, marginTop: 4 };
+
   return (
     <>
       <style>{css}</style>
@@ -598,21 +604,35 @@ export default function Detail() {
           <div style={{ flex: 1 }}>
             <div className="tag" style={{ marginBottom: 8, fontSize: 11 }}>{entityType === "track" ? "Canción" : entityType === "artist" ? "Artista" : "Álbum"}</div>
             <h2 style={{ fontSize: 22, fontWeight: 500, letterSpacing: -0.3, lineHeight: 1.2, marginBottom: 6 }}>{title}</h2>
-            {entityType === "track" ? (
+            {isMusic ? (
               <div>
-                <a
-                  onClick={() => data?.artistId && router.push(`/sonar/detail?id=${data.artistId}&type=artist`)}
-                  style={{ fontSize: 16, color: COLORS.accent, fontWeight: 300, cursor: data?.artistId ? 'pointer' : 'default', textDecoration: data?.artistId ? 'underline' : 'none' }}
-                >
-                  {subtitle}
-                </a>
-                {description && <p style={{ fontSize: 13, color: COLORS.textTertiary, marginTop: 4 }}>{description}</p>}
+                <div>
+                  <a
+                    onClick={() => data?.artistId && router.push(`/sonar/detail?id=${data.artistId}&type=artist`)}
+                    style={subtitleLinkStyle}
+                  >
+                    {subtitle}
+                  </a>
+                </div>
+
+                {description ? (
+                  entityType === "track" ? (
+                    <a
+                      onClick={() => data?.albumId && router.push(`/sonar/detail?id=${data.albumId}&type=album`)}
+                      style={descriptionLinkStyle}
+                    >
+                      {description}
+                    </a>
+                  ) : (
+                    <p style={descriptionPlainStyle}>{description}</p>
+                  )
+                ) : null}
               </div>
             ) : (
-              <>
+              <div>
                 <p style={{ fontSize: 16, color: COLORS.textSecondary, fontWeight: 300 }}>{subtitle}</p>
                 {description && <p style={{ fontSize: 13, color: COLORS.textTertiary, marginTop: 4 }}>{description}</p>}
-              </>
+              </div>
             )}
           </div>
         </div>
