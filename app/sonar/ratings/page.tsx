@@ -61,7 +61,7 @@ function ScoreRing({ score, isDarkMode }: { score: number; isDarkMode: boolean }
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
   const color = scoreToColor(score);
   const offset = CIRCUMFERENCE * (1 - score / 10);
-  
+
   const trackStroke = isDarkMode ? "rgba(255,255,255,0.15)" : "rgba(80,60,160,0.15)";
 
   return (
@@ -132,10 +132,16 @@ function AllRatingsContent() {
     setRatingsPage,
   } = useSearch();
 
+  // Local filters for album/artist
+  const [ratingsFilterAlbum, setRatingsFilterAlbum] = useState("");
+  const [ratingsFilterArtist, setRatingsFilterArtist] = useState("");
+  const [albumsList, setAlbumsList] = useState<string[]>([]);
+  const [artistsList, setArtistsList] = useState<string[]>([]);
+
   const [ratings, setRatings] = useState<RatingWithMeta[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  
+
   // Local state for debouncing
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -146,6 +152,8 @@ function AllRatingsContent() {
     setRatingsFilterType,
     setRatingsSortBy,
     setDebouncedQuery,
+    setRatingsFilterAlbum,
+    setRatingsFilterArtist,
   });
 
   useEffect(() => {
@@ -155,6 +163,8 @@ function AllRatingsContent() {
       setRatingsFilterType,
       setRatingsSortBy,
       setDebouncedQuery,
+      setRatingsFilterAlbum,
+      setRatingsFilterArtist,
     };
   }, [setRatingsPage, setRatingsSearch, setRatingsFilterType, setRatingsSortBy]);
 
@@ -167,11 +177,15 @@ function AllRatingsContent() {
     const search = searchParams.get("search") || "";
     const filterType = searchParams.get("filterType") || "";
     const sort = searchParams.get("sort") || "createdAt";
+    const album = searchParams.get("album") || "";
+    const artist = searchParams.get("artist") || "";
 
     setRatingsPage(page);
     setRatingsSearch(search);
     setRatingsFilterType(filterType);
     setRatingsSortBy(sort);
+    setRatingsFilterAlbum(album);
+    setRatingsFilterArtist(artist);
     setDebouncedQuery(search);
   }, []);
 
@@ -181,8 +195,10 @@ function AllRatingsContent() {
     if (page > 1) params.set("page", String(page));
     if (search) params.set("search", search);
     if (filterType) params.set("filterType", filterType);
+    if (ratingsFilterAlbum) params.set("album", ratingsFilterAlbum);
+    if (ratingsFilterArtist) params.set("artist", ratingsFilterArtist);
     if (sort !== "createdAt") params.set("sort", sort);
-    
+
     const queryString = params.toString();
     return queryString ? `/sonar/ratings?${queryString}` : "/sonar/ratings";
   };
@@ -195,6 +211,13 @@ function AllRatingsContent() {
     window.history.replaceState(null, "", newUrl);
   }, [ratingsPage, ratingsSearch, ratingsFilterType, ratingsSortBy]);
 
+  // Sync album/artist filters into URL as well
+  useEffect(() => {
+    if (!isInitialized.current) return;
+    const newUrl = buildUrl(ratingsPage, ratingsSearch, ratingsFilterType, ratingsSortBy);
+    window.history.replaceState(null, "", newUrl);
+  }, [ratingsFilterAlbum, ratingsFilterArtist]);
+
   // Listen for back/forward navigation - only set up once
   useEffect(() => {
     const handlePopState = () => {
@@ -203,12 +226,16 @@ function AllRatingsContent() {
       const search = searchStr.get("search") || "";
       const filterType = searchStr.get("filterType") || "";
       const sort = searchStr.get("sort") || "createdAt";
+      const album = searchStr.get("album") || "";
+      const artist = searchStr.get("artist") || "";
 
       settersRef.current.setRatingsPage(page);
       settersRef.current.setRatingsSearch(search);
       settersRef.current.setRatingsFilterType(filterType);
       settersRef.current.setRatingsSortBy(sort);
       settersRef.current.setDebouncedQuery(search);
+      settersRef.current.setRatingsFilterAlbum(album);
+      settersRef.current.setRatingsFilterArtist(artist);
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -237,7 +264,7 @@ function AllRatingsContent() {
   // Reset page when filters change
   useEffect(() => {
     setRatingsPage(1);
-  }, [ratingsFilterType, ratingsSortBy, setRatingsPage]);
+  }, [ratingsFilterType, ratingsSortBy, ratingsFilterAlbum, ratingsFilterArtist, setRatingsPage]);
 
   useEffect(() => {
     (async () => {
@@ -251,6 +278,8 @@ function AllRatingsContent() {
 
         if (ratingsFilterType) params.append("filterType", ratingsFilterType);
         if (debouncedQuery) params.append("q", debouncedQuery);
+        if (ratingsFilterAlbum) params.append("album", ratingsFilterAlbum);
+        if (ratingsFilterArtist) params.append("artist", ratingsFilterArtist);
 
         const res = await fetch(`/api/ratings?${params.toString()}`);
         const data = await res.json();
@@ -272,7 +301,29 @@ function AllRatingsContent() {
         setLoading(false);
       }
     })();
-  }, [ratingsPage, debouncedQuery, ratingsFilterType, ratingsSortBy]);
+  }, [ratingsPage, debouncedQuery, ratingsFilterType, ratingsSortBy, ratingsFilterAlbum, ratingsFilterArtist]);
+
+  // Load album/artist lists for filters (once)
+  useEffect(() => {
+    (async () => {
+      try {
+        const [albRes, artRes] = await Promise.all([
+          fetch(`/api/ratings/albums`),
+          fetch(`/api/ratings/artists`),
+        ]);
+        if (albRes.ok) {
+          const d = await albRes.json();
+          setAlbumsList(Array.isArray(d.items) ? d.items : []);
+        }
+        if (artRes.ok) {
+          const d2 = await artRes.json();
+          setArtistsList(Array.isArray(d2.items) ? d2.items : []);
+        }
+      } catch (e) {
+        console.error("Error loading album/artist lists", e);
+      }
+    })();
+  }, []);
 
   const css = `
     .glass-card {
@@ -294,7 +345,10 @@ function AllRatingsContent() {
     }
 
     .filter-row {
-      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      align-items: center;
     }
 
     .search-input {
@@ -317,6 +371,19 @@ function AllRatingsContent() {
 
     .filter-label {
       font-size: 12px; color: ${COLORS.textSecondary}; white-space: nowrap; font-weight: 500;
+    }
+
+    /* Ensure selects share the same size: label fixed, select fills remaining space */
+    .filter-item { display: flex; align-items: center; gap: 8px; }
+    .filter-item .filter-label { flex: 0 0 40px; }
+    .filter-item .filter-select { flex: 0.6 1 0; min-width: 0; }
+
+    /* Responsive: switch to single column on narrow screens */
+    @media (max-width: 410px) {
+      .filter-row { grid-template-columns: 1fr; }
+      .filter-item { flex-direction: column; align-items: stretch; }
+      .filter-item .filter-label { flex: none; margin-bottom: 6px; }
+      .filter-item .filter-select { flex: none; width: 100%; }
     }
 
     .rating-row {
@@ -400,27 +467,61 @@ function AllRatingsContent() {
               onChange={(e) => setRatingsSearch(e.target.value)}
             />
             <div className="filter-row">
-              <label className="filter-label">Tipo:</label>
-              <select
-                className="filter-select"
-                value={ratingsFilterType}
-                onChange={(e) => setRatingsFilterType(e.target.value)}
-              >
-                <option value="">Todos</option>
-                <option value="track">Canción</option>
-                <option value="album">Álbum</option>
-                <option value="artist">Artista</option>
-              </select>
 
-              <label className="filter-label" style={{ marginLeft: "auto" }}>Ordenar por:</label>
-              <select
-                className="filter-select"
-                value={ratingsSortBy}
-                onChange={(e) => setRatingsSortBy(e.target.value)}
-              >
-                <option value="createdAt">Fecha</option>
-                <option value="score">Puntuación</option>
-              </select>
+              <div className="flex gap-2 items-center filter-item">
+                <label className="filter-label">Tipo:</label>
+                <select
+                  className="filter-select"
+                  value={ratingsFilterType}
+                  onChange={(e) => setRatingsFilterType(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  <option value="track">Canción</option>
+                  <option value="album">Álbum</option>
+                  <option value="artist">Artista</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 items-center filter-item">
+                <label className="filter-label">Orden:</label>
+                <select
+                  className="filter-select"
+                  value={ratingsSortBy}
+                  onChange={(e) => setRatingsSortBy(e.target.value)}
+                >
+                  <option value="createdAt">Fecha</option>
+                  <option value="score">Puntuación</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 items-center filter-item">
+                <label className="filter-label">Artista:</label>
+                <select
+                  className="filter-select"
+                  value={ratingsFilterArtist}
+                  onChange={(e) => setRatingsFilterArtist(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  {artistsList.map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2 items-center filter-item">
+                <label className="filter-label">Álbum:</label>
+                <select
+                  className="filter-select"
+                  value={ratingsFilterAlbum}
+                  onChange={(e) => setRatingsFilterAlbum(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  {albumsList.map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              </div>
+
             </div>
           </div>
 

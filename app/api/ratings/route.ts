@@ -102,6 +102,8 @@ export async function GET(request: NextRequest) {
     const offsetParam = searchParams.get("offset");
     const sort = searchParams.get("sort"); // e.g. 'score' or 'createdAt'
     const filterType = searchParams.get("filterType"); // filter by type: track, album, artist
+    const album = searchParams.get("album");
+    const artist = searchParams.get("artist");
     const minScore = searchParams.get("minScore"); // min score 0-100
     const maxScore = searchParams.get("maxScore"); // max score 0-100
     const q = searchParams.get("q"); // search query
@@ -137,6 +139,14 @@ export async function GET(request: NextRequest) {
           { notes: { contains: q } },
           { entryId: { contains: q } },
         ];
+      }
+
+      if (album) {
+        where.albumName = album;
+      }
+
+      if (artist) {
+        where.artistName = artist;
       }
 
       const [items, total] = await Promise.all([
