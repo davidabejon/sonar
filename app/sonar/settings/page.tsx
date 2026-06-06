@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useThemeClient } from "../ThemeContext";
 import { getTheme } from "../theme";
@@ -37,6 +38,14 @@ const Icon = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   ),
+  Spotify: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M7.5 10.5c3-1.5 7-1.2 9 0" />
+      <path d="M7.5 13.5c2.2-1 5.5-0.9 8 0" />
+      <path d="M7.5 16.2c1.8-0.8 4.5-0.7 6.5 0" />
+    </svg>
+  ),
   ChevronRight: () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <polyline points="9 18 15 12 9 6" />
@@ -50,6 +59,7 @@ export default function Settings() {
   const COLORS = getTheme(isDarkMode);
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [spotifyModal, setSpotifyModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/me").then(r => r.json()).then(setUser).catch(() => {});
@@ -125,11 +135,77 @@ export default function Settings() {
         // { label: "Perfil privado", toggle: "privateProfile", icon: <Icon.Lock /> },
       ],
     },
+    {
+      title: "Fuente de datos",
+      rows: [
+        {
+          label: "Spotify",
+          value: "Más información",
+          icon: <Icon.Spotify />,
+          action: () => setSpotifyModal(true),
+        },
+      ],
+    },
   ];
 
   return (
     <>
       <style>{css}</style>
+
+      {spotifyModal && createPortal(
+        <div
+          onClick={() => setSpotifyModal(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "0 24px",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: COLORS.surface,
+              border: `0.5px solid ${COLORS.glassBorder}`,
+              borderRadius: 20, padding: "28px 24px", maxWidth: 400, width: "100%",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <div style={{ color: COLORS.textTertiary, width: 20, height: 20 }}><Icon.Spotify /></div>
+              <span style={{ fontSize: 17, fontWeight: 600 }}>Fuente de datos: Spotify</span>
+            </div>
+            <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6, margin: "0 0 12px" }}>
+              Sonar utiliza la <strong style={{ color: COLORS.text }}>Spotify Web API</strong> para obtener información sobre artistas, álbumes y canciones, incluyendo portadas, géneros y metadatos.
+            </p>
+            <p style={{ fontSize: 14, color: COLORS.textSecondary, lineHeight: 1.6, margin: "0 0 12px" }}>
+              Sonar no está afiliado ni respaldado por Spotify AB. Toda la información musical mostrada proviene de Spotify y está sujeta a sus términos de uso.
+            </p>
+            <p style={{ fontSize: 13, color: COLORS.textTertiary, lineHeight: 1.5, margin: 0 }}>
+              Spotify es una marca registrada de Spotify AB. El uso de la API se realiza conforme a las{" "}
+              <a
+                href="https://developer.spotify.com/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#1DB954", textDecoration: "none" }}
+              >
+                Condiciones de Uso de Spotify para Desarrolladores
+              </a>.
+            </p>
+            <button
+              onClick={() => setSpotifyModal(false)}
+              style={{
+                marginTop: 24, width: "100%", padding: "12px 0",
+                background: COLORS.surfaceHover, border: `0.5px solid ${COLORS.glassBorder}`,
+                borderRadius: 14, color: COLORS.text, fontSize: 15, cursor: "pointer",
+              }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <div className="content-area" style={{ paddingTop: 24 }}>
         {/* Profile mini */}
         <div
