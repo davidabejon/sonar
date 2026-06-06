@@ -49,6 +49,13 @@ const Icon = {
 const RADIUS = 20;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
+const PALETTE = [
+  { color: "#A78BFA", label: "Violeta" },
+  { color: "#FF6B6B", label: "Coral" },
+  { color: "#34D399", label: "Esmeralda" },
+  { color: "#60A5FA", label: "Azul" },
+];
+
 function scoreToColor(score: number): string {
   const t = Math.min(Math.max(score, 0), 10) / 10;
   if (t <= 0.5) {
@@ -148,11 +155,12 @@ export default function Detail() {
   const [deleting, setDeleting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const colors = ["#FF6B6B", "#A78BFA", "#34D399", "#FBBF24", "#F97316", "#60A5FA"];
-  const randomColor = colors[Math.floor(Math.random() * colors.length)];
+  const [selectedColor, setSelectedColor] = useState(PALETTE[0].color);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -326,7 +334,7 @@ export default function Detail() {
       backdrop-filter: blur(6px);
     }
     .share-sheet {
-      width: 100%; max-width: 480px; background: #fff; padding: 14px 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.18); z-index: 10000;
+      width: 100%; max-width: 480px; min-height: 560px; background: #fff; padding: 14px 12px; box-shadow: 0 12px 40px rgba(2,6,23,0.18); z-index: 10000;
       color: #111; display: flex; flex-direction: column; gap: 8px;
     }
     .share-row { display: flex; gap: 14px; align-items: center; justify-content: center; padding: 6px 4px; }
@@ -364,6 +372,35 @@ export default function Detail() {
           <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
             <button className="share-close" onClick={onClose} aria-label="Cerrar">✕</button>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 16px 4px' }}>
+            {previewLoading ? (
+              <div style={{ width: 180, height: 340, borderRadius: 12, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="#9CA3AF" strokeWidth={1.8} style={{ animation: 'spin 1s linear infinite' }}>
+                  <circle cx="12" cy="12" r="10" />
+                </svg>
+              </div>
+            ) : previewUrl ? (
+              <img src={previewUrl as string} alt="Vista previa" style={{ maxWidth: 180, borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', display: 'block' }} />
+            ) : null}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, padding: '4px 16px 4px' }}>
+            {PALETTE.map(({ color, label }) => (
+              <button
+                key={color}
+                aria-label={label}
+                onClick={() => handlePreviewColorChange(color)}
+                style={{
+                  width: 28, height: 28, borderRadius: '50%', background: color, border: 'none',
+                  cursor: 'pointer', padding: 0,
+                  outline: selectedColor === color ? `3px solid ${color}` : '3px solid transparent',
+                  outlineOffset: 2,
+                  opacity: previewLoading ? 0.5 : 1,
+                  transition: 'outline 0.15s, opacity 0.15s',
+                }}
+              />
+            ))}
+          </div>
+          <hr style={{opacity: 0.1, margin: '8px 0'}}></hr>
           <div className="share-row">
             <div className="share-item">
               <button className="share-icon" onClick={onDownload} disabled={sharing} style={{ border: 'none', cursor: 'pointer' }}>
@@ -428,9 +465,29 @@ export default function Detail() {
     }
   };
 
-  const handleShare = async () => {
+  const generatePreview = async (color: string) => {
+    setPreviewUrl(null);
+    setPreviewLoading(true);
+    try {
+      const { generateShareImage } = await import("./generateShareImage");
+      const url = await generateShareImage({ title, subtitle, note, added, score, image: data?.image ?? null, isDarkMode, randomColor: color });
+      setPreviewUrl(url);
+    } catch (err) {
+      console.error("Error generating preview:", err);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handlePreviewColorChange = (color: string) => {
+    setSelectedColor(color);
+    generatePreview(color);
+  };
+
+  const handleShare = () => {
     if (!data) return;
     setShowShareModal(true);
+    generatePreview(selectedColor);
   };
 
   const handleDownloadShare = async () => {
@@ -448,7 +505,7 @@ export default function Detail() {
         score,
         image: data?.image ?? null,
         isDarkMode,
-        randomColor,
+        randomColor: selectedColor,
       });
 
       const link = document.createElement("a");
@@ -478,7 +535,7 @@ export default function Detail() {
         score,
         image: data?.image ?? null,
         isDarkMode,
-        randomColor,
+        randomColor: selectedColor,
       });
 
       // convert to blob
@@ -502,7 +559,7 @@ export default function Detail() {
       // fallback: just download
       try {
         const { generateShareImage } = await import("./generateShareImage");
-        const dataUrl = await generateShareImage({ title, subtitle, note, added, score, image: data?.image ?? null, isDarkMode, randomColor });
+        const dataUrl = await generateShareImage({ title, subtitle, note, added, score, image: data?.image ?? null, isDarkMode, randomColor: selectedColor });
         const link = document.createElement("a");
         link.download = `${(title || "sonar").replace(/[^a-z0-9]/gi, "-").toLowerCase()}-sonar.png`;
         link.href = dataUrl;
@@ -595,12 +652,12 @@ export default function Detail() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Hero */}
         <div style={{
-          background: `linear-gradient(180deg, ${randomColor}22 0%, transparent 100%)`,
+          background: `linear-gradient(180deg, ${selectedColor}22 0%, transparent 100%)`,
           padding: "32px 20px 24px",
           display: "flex", gap: 20, alignItems: "flex-end",
           flexShrink: 0,
         }}>
-          <AlbumArt color={randomColor} size={100} src={data?.image} alt={title} />
+          <AlbumArt color={selectedColor} size={100} src={data?.image} alt={title} />
           <div style={{ flex: 1 }}>
             <div className="tag" style={{ marginBottom: 8, fontSize: 11 }}>{entityType === "track" ? "Canción" : entityType === "artist" ? "Artista" : "Álbum"}</div>
             <h2 style={{ fontSize: 22, fontWeight: 500, letterSpacing: -0.3, lineHeight: 1.2, marginBottom: 6 }}>{title}</h2>

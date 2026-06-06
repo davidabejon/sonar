@@ -19,7 +19,7 @@ export async function generateShareImage({
 }): Promise<string> {
   const hasNote = added && note?.trim().length > 0;
   const logicalW = 360;
-  const logicalH = hasNote ? 680 : added ? 600 : 520;
+  const logicalH = 680;
   const exportWidth = 1080;
   const exportScale = exportWidth / logicalW;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -115,24 +115,24 @@ export async function generateShareImage({
 
   // Background
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, isDarkMode ? "#7C3AED" : "#A78BFA");
-  bg.addColorStop(0.42, isDarkMode ? "#171717" : "#F4F0FF");
+  bg.addColorStop(0, randomColor);
+  bg.addColorStop(0.45, isDarkMode ? "#171717" : "#F4F0FF");
   bg.addColorStop(1, isDarkMode ? "#050505" : "#EDE9FE");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
   // Decorative blobs
-  const blob1 = ctx.createRadialGradient(40, 40, 0, 40, 40, 180);
-  blob1.addColorStop(0, `${randomColor}66`);
+  const blob1 = ctx.createRadialGradient(40, 40, 0, 40, 40, 200);
+  blob1.addColorStop(0, `${randomColor}BB`);
   blob1.addColorStop(1, "transparent");
   ctx.fillStyle = blob1;
-  ctx.fillRect(0, 0, W, 260);
+  ctx.fillRect(0, 0, W, 300);
 
-  const blob2 = ctx.createRadialGradient(W - 40, H - 80, 0, W - 40, H - 80, 220);
-  blob2.addColorStop(0, `${randomColor}44`);
+  const blob2 = ctx.createRadialGradient(W - 40, H - 80, 0, W - 40, H - 80, 240);
+  blob2.addColorStop(0, `${randomColor}88`);
   blob2.addColorStop(1, "transparent");
   ctx.fillStyle = blob2;
-  ctx.fillRect(0, H - 260, W, 260);
+  ctx.fillRect(0, H - 300, W, 300);
 
   // Main card
   const cardX = 28;
