@@ -31,6 +31,17 @@ const nextConfig: NextConfig = {
   // Turbopack optimizations (Next.js 16 uses Turbopack by default)
   turbopack: {},
 
+  // Redirect root to login
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/login',
+        permanent: false,
+      },
+    ];
+  },
+
   // Headers for caching
   async headers() {
     return [

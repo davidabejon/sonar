@@ -4,10 +4,16 @@ const isApiRoute = (pathname: string) => pathname.startsWith("/api/");
 const isSpotifyApi = (pathname: string) => pathname.startsWith("/api/spotify");
 
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
   const session = request.cookies.get("session")?.value;
 
+  if (pathname === "/") {
+    const dest = session ? "/sonar/home" : "/login";
+    return NextResponse.redirect(new URL(dest, request.url));
+  }
+
   if (!session) {
-    if (isApiRoute(request.nextUrl.pathname)) {
+    if (isApiRoute(pathname)) {
       return NextResponse.json(
         { error: "No autenticado" },
         { status: 401 }
@@ -15,7 +21,7 @@ export function middleware(request: NextRequest) {
     }
 
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -33,6 +39,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/sonar/:path*",
     "/api/me",
     "/api/ratings/:path*",
